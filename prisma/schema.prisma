@@ -87,6 +87,7 @@ model Booking {
   id         Int            @id @default(autoincrement())
   checkIn    DateTime
   checkOut   DateTime
+  guests     Int            @default(1)
   totalPrice Float
   status     BookingStatus  @default(PENDING)
   createdAt  DateTime      @default(now())
@@ -125,5 +126,4 @@ model Review {
   listingId  Int
   listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
-
 
