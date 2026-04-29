@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  HOST
+  GUEST
+}
+
+enum ListingType {
+  APARTMENT
+  HOUSE
+  VILLA
+  CABIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  username       String   @unique
+  phone          String
+  role           Role     @default(GUEST)
+  avatar         String?
+  avatarPublicId String?
+  bio            String?
+  createdAt      DateTime @default(now())
+  password       String
+  updatedAt      DateTime @updatedAt
+  resetToken     String?
+  resetTokenExpiry DateTime?
+  @@index([name])
+  @@index([role])
+
+  listings       Listing[]
+  bookings       Booking[]
+  reviews        Review[]
+}
+
+model Listing {
+  id             Int          @id @default(autoincrement())
+  title          String
+  description    String
+  location       String
+  pricePerNight  Float
+  guests         Int
+  type           ListingType
+  amenities      String[]
+  rating         Float?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  url            String?
+  publicId       String?
+
+
+  @@index([hostId])
+  @@index([location])
+  @@index([type])
+  @@index([pricePerNight])
+
+  hostId Int
+  host   User @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  bookings Booking[]
+  photos   ListingPhoto[]
+  reviews  Review[]
+}
+
+model Booking {
+  id         Int            @id @default(autoincrement())
+  checkIn    DateTime
+  checkOut   DateTime
+  totalPrice Float
+  status     BookingStatus  @default(PENDING)
+  createdAt  DateTime      @default(now())
+
+  @@index([guestId])
+  @@index([listingId])
+  @@index([status])
+
+  guestId Int
+  guest   User @relation(fields: [guestId], references: [id])
+
+  listingId Int
+  listing   Listing @relation(fields: [listingId], references: [id])
+}
+
+model ListingPhoto {
+  id        Int     @id @default(autoincrement())
+  url       String
+  publicId  String?
+  listingId Int
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  reviewerId Int
+  reviewer   User     @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([reviewerId])
+  @@index([listingId])
+
+  listingId  Int
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+
