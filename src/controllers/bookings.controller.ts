@@ -63,9 +63,9 @@ export async function getAllBookings(req: AuthRequest, res: Response) {
 
 export async function getBookingById(req: AuthRequest, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid booking ID" });
     }
 
@@ -95,8 +95,8 @@ export async function createBooking(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "userId, listingId, checkIn, checkOut and guests are required" });
     }
 
-    const effectiveUserId = Number(userId ?? req.userId);
-    const parsedListingId = Number(listingId);
+    const effectiveUserId = userId ?? req.userId;
+    const parsedListingId = listingId;
     const parsedGuests = Number(guests);
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
@@ -107,8 +107,8 @@ export async function createBooking(req: AuthRequest, res: Response) {
     }
 
     if (
-      Number.isNaN(effectiveUserId) ||
-      Number.isNaN(parsedListingId) ||
+      !effectiveUserId ||
+      !parsedListingId ||
       Number.isNaN(parsedGuests) ||
       Number.isNaN(checkInDate.getTime()) ||
       Number.isNaN(checkOutDate.getTime())
@@ -195,10 +195,10 @@ export async function createBooking(req: AuthRequest, res: Response) {
 
 export async function updateBookingStatus(req: AuthRequest, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
     const { status } = req.body;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid booking ID" });
     }
 
@@ -233,9 +233,9 @@ export async function updateBookingStatus(req: AuthRequest, res: Response) {
 
 export async function deleteBooking(req: AuthRequest, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid booking ID" });
     }
 

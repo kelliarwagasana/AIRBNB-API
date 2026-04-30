@@ -202,9 +202,9 @@ export async function getListingStats(_req: AuthRequest, res: Response) {
 
 export async function getListingById(req: AuthRequest, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid listing ID" });
     }
 
@@ -290,9 +290,9 @@ export async function createListing(req: AuthRequest, res: Response) {
 
 export async function updateListing(req: AuthRequest, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid listing ID" });
     }
 
@@ -337,9 +337,9 @@ export async function updateListing(req: AuthRequest, res: Response) {
 
 export async function deleteListing(req: AuthRequest, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid listing ID" });
     }
 

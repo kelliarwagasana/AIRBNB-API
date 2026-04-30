@@ -5,7 +5,7 @@ const JWT_SECRET = process.env["JWT_SECRET"] as string;
 
 // Extend Request to carry userId and role after authentication
 export interface AuthRequest extends Request {
-  userId?: number;
+  userId?: string;
   role?: string;
 }
 
@@ -24,7 +24,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
     req.userId = decoded.userId;
     req.role = decoded.role;
     next();

@@ -3,7 +3,7 @@ import { clearCacheByPrefix, getCache, setCache } from "../config/cache.js";
 import { prisma } from "../lib/prisma.js";
 import type { AuthRequest } from "../middleware/auth.middleware.js";
 
-async function refreshListingRating(listingId: number) {
+async function refreshListingRating(listingId: string) {
   const aggregate = await prisma.review.aggregate({
     where: { listingId },
     _avg: { rating: true },
@@ -17,14 +17,14 @@ async function refreshListingRating(listingId: number) {
   });
 }
 
-function invalidateReviewCaches(listingId: number) {
+function invalidateReviewCaches(listingId: string) {
   clearCacheByPrefix(`reviews:listing:${listingId}:`);
   clearCacheByPrefix("listings:list:");
 }
 
 export async function getListingReviews(req: AuthRequest, res: Response) {
   try {
-    const listingId = parseInt(req.params["id"] as string, 10);
+    const listingId = req.params["id"] as string;
     const page = parseInt((req.query["page"] as string) ?? "1", 10);
     const limit = parseInt((req.query["limit"] as string) ?? "10", 10);
 
@@ -90,10 +90,10 @@ export async function getListingReviews(req: AuthRequest, res: Response) {
 
 export async function createReview(req: AuthRequest, res: Response) {
   try {
-    const listingId = parseInt(req.params["id"] as string, 10);
+    const listingId = req.params["id"] as string;
     const { userId, rating, comment } = req.body;
 
-    if (Number.isNaN(listingId)) {
+    if (!listingId) {
       return res.status(400).json({ error: "Invalid listing ID" });
     }
 
@@ -101,10 +101,10 @@ export async function createReview(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "userId, rating and comment are required" });
     }
 
-    const reviewerId = Number(userId ?? req.userId);
+    const reviewerId = userId ?? req.userId;
     const numericRating = Number(rating);
 
-    if (Number.isNaN(reviewerId)) {
+    if (!reviewerId) {
       return res.status(400).json({ error: "Invalid userId" });
     }
 

@@ -32,7 +32,7 @@ enum BookingStatus {
 }
 
 model User {
-  id             Int      @id @default(autoincrement())
+  id             String      @id @default(uuid())
   name           String
   email          String   @unique
   username       String   @unique
@@ -55,7 +55,7 @@ model User {
 }
 
 model Listing {
-  id             Int          @id @default(autoincrement())
+  id             String          @id @default(uuid())
   title          String
   description    String
   location       String
@@ -75,7 +75,7 @@ model Listing {
   @@index([type])
   @@index([pricePerNight])
 
-  hostId Int
+  hostId String
   host   User @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   bookings Booking[]
@@ -84,7 +84,7 @@ model Listing {
 }
 
 model Booking {
-  id         Int            @id @default(autoincrement())
+  id         String            @id @default(uuid())
   checkIn    DateTime
   checkOut   DateTime
   guests     Int            @default(1)
@@ -96,10 +96,10 @@ model Booking {
   @@index([listingId])
   @@index([status])
 
-  guestId Int
+  guestId String
   guest   User @relation(fields: [guestId], references: [id])
 
-  listingId Int
+  listingId String
   listing   Listing @relation(fields: [listingId], references: [id])
 }
 
@@ -107,7 +107,7 @@ model ListingPhoto {
   id        Int     @id @default(autoincrement())
   url       String
   publicId  String?
-  listingId Int
+  listingId String
   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 
@@ -117,13 +117,13 @@ model Review {
   comment    String?
   createdAt  DateTime @default(now())
 
-  reviewerId Int
+  reviewerId String
   reviewer   User     @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
 
   @@index([reviewerId])
   @@index([listingId])
 
-  listingId  Int
+  listingId  String
   listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 
