@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllUsers, getUserById, createUser, updateUser, deleteUser, getUserListings, getUserBookings, getUserStats } from "../controllers/users.controller.js";
+import { getAllUsers, getUserById, createUser, updateUser, deleteUser, getUserListings, getUserBookings } from "../controllers/users.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 /**
  * @swagger
@@ -10,8 +10,9 @@ import { authenticate } from "../middleware/auth.middleware.js";
  *       type: object
  *       properties:
  *         id:
- *           type: integer
- *           example: 1
+ *           type: string
+ *           format: uuid
+ *           example: 71666a39-12e3-4639-ba21-6b76eed83155
  *         name:
  *           type: string
  *           example: Alice
@@ -89,7 +90,7 @@ import { authenticate } from "../middleware/auth.middleware.js";
 const router = Router();
 /**
  * @swagger
- * /users:
+ * /api/v1/users:
  *   get:
  *     summary: Get all users
  *     description: Returns a list of all users in the system. Requires authentication
@@ -126,10 +127,9 @@ const router = Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/", authenticate, getAllUsers);
-router.get("/stats", authenticate, getUserStats);
 /**
  * @swagger
- * /users/{id}:
+ * /api/v1/users/{id}:
  *   get:
  *     summary: Get a user by ID
  *     tags: [Users]
@@ -140,7 +140,8 @@ router.get("/stats", authenticate, getUserStats);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The user ID
  *     responses:
  *       200:
@@ -165,7 +166,7 @@ router.get("/stats", authenticate, getUserStats);
 router.get("/:id", authenticate, getUserById);
 /**
  * @swagger
- * /users/{id}/listings:
+ * /api/v1/users/{id}/listings:
  *   get:
  *     summary: Get all listings by a user
  *     tags: [Users]
@@ -176,7 +177,8 @@ router.get("/:id", authenticate, getUserById);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The user ID
  *     responses:
  *       200:
@@ -187,7 +189,7 @@ router.get("/:id", authenticate, getUserById);
 router.get("/:id/listings", authenticate, getUserListings);
 /**
  * @swagger
- * /users/{id}/bookings:
+ * /api/v1/users/{id}/bookings:
  *   get:
  *     summary: Get all bookings by a user
  *     tags: [Bookings]
@@ -198,7 +200,8 @@ router.get("/:id/listings", authenticate, getUserListings);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The user ID
  *       - in: query
  *         name: page
@@ -290,7 +293,8 @@ router.post("/create", createUser);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The user ID
  *     requestBody:
  *       content:
@@ -340,7 +344,8 @@ router.put("/:id", authenticate, updateUser);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The user ID
  *     responses:
  *       200:

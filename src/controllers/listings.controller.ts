@@ -50,7 +50,6 @@ function buildListingWhere(req: AuthRequest): Prisma.ListingWhereInput {
 
 function invalidateListingCaches() {
   clearCacheByPrefix("listings:list:");
-  clearCacheByPrefix("listings:stats");
 }
 
 export async function getAllListings(req: AuthRequest, res: Response) {
@@ -150,52 +149,6 @@ export async function searchListings(req: AuthRequest, res: Response) {
     });
   } catch (error) {
     logger.error("Error in searchListings", { error, path: req.path });
-    return res.status(500).json({ error: "Something went wrong" });
-  }
-}
-
-export async function getListingStats(_req: AuthRequest, res: Response) {
-  try {
-    const cacheKey = "listings:stats";
-    const cached = getCache(cacheKey);
-
-    if (cached) {
-      return res.json(cached);
-    }
-
-    const [totalListings, averagePrice, byLocation, byType] = await Promise.all([
-      prisma.listing.count(),
-      prisma.listing.aggregate({
-        _avg: {
-          pricePerNight: true,
-        },
-      }),
-      prisma.listing.groupBy({
-        by: ["location"],
-        _count: {
-          location: true,
-        },
-      }),
-      prisma.listing.groupBy({
-        by: ["type"],
-        _count: {
-          type: true,
-        },
-      }),
-    ]);
-
-    const payload = {
-      totalListings,
-      averagePrice: averagePrice._avg.pricePerNight ?? 0,
-      byLocation,
-      byType,
-    };
-
-    setCache(cacheKey, payload, 300);
-
-    return res.json(payload);
-  } catch (error) {
-    logger.error("Error in getListingStats", { error });
     return res.status(500).json({ error: "Something went wrong" });
   }
 }

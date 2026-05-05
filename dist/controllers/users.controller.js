@@ -1,6 +1,5 @@
 import bcrypt from "bcrypt";
 import { Prisma } from "@prisma/client";
-import { clearCacheByPrefix, getCache, setCache } from "../config/cache.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
 function sanitizeUser(user) {
@@ -14,9 +13,6 @@ function parsePagination(req) {
         return null;
     }
     return { page, limit, skip: (page - 1) * limit };
-}
-function invalidateUserStatsCache() {
-    clearCacheByPrefix("users:stats");
 }
 export async function getAllUsers(req, res) {
     try {
@@ -53,35 +49,10 @@ export async function getAllUsers(req, res) {
         return res.status(500).json({ error: "Something went wrong" });
     }
 }
-export async function getUserStats(_req, res) {
-    try {
-        const cacheKey = "users:stats";
-        const cached = getCache(cacheKey);
-        if (cached) {
-            return res.json(cached);
-        }
-        const [totalUsers, byRole] = await Promise.all([
-            prisma.user.count(),
-            prisma.user.groupBy({
-                by: ["role"],
-                _count: {
-                    role: true,
-                },
-            }),
-        ]);
-        const payload = { totalUsers, byRole };
-        setCache(cacheKey, payload, 300);
-        return res.json(payload);
-    }
-    catch (error) {
-        logger.error("Error in getUserStats", { error });
-        return res.status(500).json({ error: "Something went wrong" });
-    }
-}
 export async function getUserById(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
-        if (Number.isNaN(id)) {
+        const id = req.params["id"];
+        if (!id) {
             return res.status(400).json({ error: "Invalid user ID" });
         }
         const user = await prisma.user.findUnique({
@@ -107,9 +78,9 @@ export async function getUserById(req, res) {
 }
 export async function getUserListings(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
+        const id = req.params["id"];
         const pagination = parsePagination(req);
-        if (Number.isNaN(id)) {
+        if (!id) {
             return res.status(400).json({ error: "Invalid user ID" });
         }
         if (!pagination) {
@@ -150,9 +121,9 @@ export async function getUserListings(req, res) {
 }
 export async function getUserBookings(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
+        const id = req.params["id"];
         const pagination = parsePagination(req);
-        if (Number.isNaN(id)) {
+        if (!id) {
             return res.status(400).json({ error: "Invalid user ID" });
         }
         if (!pagination) {
@@ -225,7 +196,6 @@ export async function createUser(req, res) {
                 bio: bio ?? null,
             },
         });
-        invalidateUserStatsCache();
         return res.status(201).json(sanitizeUser(newUser));
     }
     catch (error) {
@@ -239,8 +209,8 @@ export async function createUser(req, res) {
 }
 export async function updateUser(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
-        if (Number.isNaN(id)) {
+        const id = req.params["id"];
+        if (!id) {
             return res.status(400).json({ error: "Invalid user ID" });
         }
         const existingUser = await prisma.user.findUnique({
@@ -263,7 +233,6 @@ export async function updateUser(req, res) {
                 ...(password !== undefined && { password: await bcrypt.hash(String(password), 10) }),
             },
         });
-        invalidateUserStatsCache();
         return res.json(sanitizeUser(updatedUser));
     }
     catch (error) {
@@ -277,8 +246,8 @@ export async function updateUser(req, res) {
 }
 export async function deleteUser(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
-        if (Number.isNaN(id)) {
+        const id = req.params["id"];
+        if (!id) {
             return res.status(400).json({ error: "Invalid user ID" });
         }
         const existingUser = await prisma.user.findUnique({
@@ -290,7 +259,6 @@ export async function deleteUser(req, res) {
         await prisma.user.delete({
             where: { id },
         });
-        invalidateUserStatsCache();
         return res.json({ message: "User deleted successfully" });
     }
     catch (error) {

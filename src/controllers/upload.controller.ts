@@ -9,7 +9,7 @@ export async function uploadAvatar(req: AuthRequest, res: Response) {
     console.log("File:", req.file);
     console.log("Body:", req.body);
 
-    const userId = Number(req.params.id);
+    const userId = req.params.id as string;
 
     // 1. Ownership check
     if (req.userId !== userId) {
@@ -74,7 +74,7 @@ export async function uploadAvatar(req: AuthRequest, res: Response) {
 // DELETE /users/:id/avatar
 export async function deleteAvatar(req: AuthRequest, res: Response) {
   try {
-    const userId = Number(req.params.id);
+    const userId = req.params.id as string;
 
     // 1. Ownership check
     if (req.userId !== userId) {
@@ -124,7 +124,7 @@ export async function deleteAvatar(req: AuthRequest, res: Response) {
 // POST /listings/:id/photos
 export async function uploadListingPhotos(req: AuthRequest, res: Response) {
   try {
-    const listingId = Number(req.params.id);
+    const listingId = req.params.id as string;
 
     // 1. Require authenticate (already handled by middleware)
     // 2. Find listing
@@ -199,8 +199,8 @@ export async function uploadListingPhotos(req: AuthRequest, res: Response) {
 // DELETE /listings/:id/photos/:photoId
 export async function deleteListingPhoto(req: AuthRequest, res: Response) {
   try {
-    const listingId = Number(req.params.id);
-    const photoId = Number(req.params.photoId);
+    const listingId = req.params.id as string;
+    const photoId = parseInt(req.params.photoId as string, 10);
 
     // 1. Require authenticate (already handled by middleware)
     // 2. Find listing

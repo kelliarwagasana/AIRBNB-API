@@ -5,6 +5,7 @@ import userRoutes from "./routes/users.route.js";
 import listingRoutes from "./routes/listings.route.js";
 import bookingRoutes from "./routes/bookings.route.js";
 import authRoutes from "./routes/auth.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import { connectDB } from "./lib/prisma.js";
@@ -25,12 +26,13 @@ app.use((req, res, next) => {
     next();
 });
 // connect routes
-app.use("/users", userRoutes);
-app.use("/auth", authRoutes);
-app.use("/listings", listingRoutes);
-app.use("/bookings", bookingRoutes);
-app.use("/", reviewRoutes);
-app.use("/upload", uploadRoutes);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/listings", listingRoutes);
+app.use("/api/v1/bookings", bookingRoutes);
+app.use("/api/v1", reviewRoutes);
+app.use("/api/v1/upload", uploadRoutes);
+app.use("/api/v1/ai", aiRoutes);
 // Error handling middleware (must be last)
 app.use(errorHandler);
 async function main() {

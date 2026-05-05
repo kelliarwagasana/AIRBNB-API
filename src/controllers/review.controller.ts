@@ -20,6 +20,7 @@ async function refreshListingRating(listingId: string) {
 function invalidateReviewCaches(listingId: string) {
   clearCacheByPrefix(`reviews:listing:${listingId}:`);
   clearCacheByPrefix("listings:list:");
+  clearCacheByPrefix(`ai:review-summary:${listingId}`);
 }
 
 export async function getListingReviews(req: AuthRequest, res: Response) {

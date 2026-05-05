@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { Prisma } from "@prisma/client";
-import { clearCacheByPrefix, getCache, setCache } from "../config/cache.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
 
@@ -19,10 +18,6 @@ function parsePagination(req: Request) {
   }
 
   return { page, limit, skip: (page - 1) * limit };
-}
-
-function invalidateUserStatsCache() {
-  clearCacheByPrefix("users:stats");
 }
 
 export async function getAllUsers(req: Request, res: Response) {
@@ -64,40 +59,11 @@ export async function getAllUsers(req: Request, res: Response) {
   }
 }
 
-export async function getUserStats(_req: Request, res: Response) {
-  try {
-    const cacheKey = "users:stats";
-    const cached = getCache(cacheKey);
-
-    if (cached) {
-      return res.json(cached);
-    }
-
-    const [totalUsers, byRole] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.groupBy({
-        by: ["role"],
-        _count: {
-          role: true,
-        },
-      }),
-    ]);
-
-    const payload = { totalUsers, byRole };
-    setCache(cacheKey, payload, 300);
-
-    return res.json(payload);
-  } catch (error) {
-    logger.error("Error in getUserStats", { error });
-    return res.status(500).json({ error: "Something went wrong" });
-  }
-}
-
 export async function getUserById(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid user ID" });
     }
 
@@ -126,10 +92,10 @@ export async function getUserById(req: Request, res: Response) {
 
 export async function getUserListings(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
     const pagination = parsePagination(req);
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid user ID" });
     }
 
@@ -175,10 +141,10 @@ export async function getUserListings(req: Request, res: Response) {
 
 export async function getUserBookings(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
     const pagination = parsePagination(req);
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid user ID" });
     }
 
@@ -261,8 +227,6 @@ export async function createUser(req: Request, res: Response) {
       },
     });
 
-    invalidateUserStatsCache();
-
     return res.status(201).json(sanitizeUser(newUser));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -277,9 +241,9 @@ export async function createUser(req: Request, res: Response) {
 
 export async function updateUser(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid user ID" });
     }
 
@@ -307,8 +271,6 @@ export async function updateUser(req: Request, res: Response) {
       },
     });
 
-    invalidateUserStatsCache();
-
     return res.json(sanitizeUser(updatedUser));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -323,9 +285,9 @@ export async function updateUser(req: Request, res: Response) {
 
 export async function deleteUser(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params["id"] as string, 10);
+    const id = req.params["id"] as string;
 
-    if (Number.isNaN(id)) {
+    if (!id) {
       return res.status(400).json({ error: "Invalid user ID" });
     }
 
@@ -340,8 +302,6 @@ export async function deleteUser(req: Request, res: Response) {
     await prisma.user.delete({
       where: { id },
     });
-
-    invalidateUserStatsCache();
 
     return res.json({ message: "User deleted successfully" });
   } catch (error) {

@@ -4,7 +4,7 @@ import { authenticate } from "../middleware/auth.middleware.js";
 const router = Router();
 /**
  * @swagger
- * /auth/register:
+ * /api/v1/auth/register:
  *   post:
  *     tags: [Auth]
  *     summary: Register a new user
@@ -44,7 +44,7 @@ const router = Router();
 router.post("/register", register);
 /**
  * @swagger
- * /auth/login:
+ * /api/v1/auth/login:
  *   post:
  *     tags: [Auth]
  *     summary: Login user
@@ -80,7 +80,7 @@ router.post("/register", register);
 router.post("/login", login);
 /**
  * @swagger
- * /auth/change-password:
+ * /api/v1/auth/change-password:
  *   post:
  *     tags: [Auth]
  *     summary: Change user password
@@ -128,7 +128,7 @@ router.post("/login", login);
 router.post("/change-password", authenticate, changePassword);
 /**
  * @swagger
- * /auth/forgot-password:
+ * /api/v1/auth/forgot-password:
  *   post:
  *     tags: [Auth]
  *     summary: Request password reset email
@@ -160,7 +160,7 @@ router.post("/change-password", authenticate, changePassword);
 router.post("/forgot-password", forgotPassword);
 /**
  * @swagger
- * /auth/reset-password/{token}:
+ * /api/v1/auth/reset-password/{token}:
  *   post:
  *     tags: [Auth]
  *     summary: Reset password using token

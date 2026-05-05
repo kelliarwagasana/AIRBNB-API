@@ -136,58 +136,61 @@ export async function createBooking(req: AuthRequest, res: Response) {
     if (!listing) {
       return res.status(404).json({ error: "Listing not found" });
     }
-
-    const conflictingBooking = await prisma.booking.findFirst({
-      where: {
-        listingId: parsedListingId,
-        status: "CONFIRMED",
-        checkIn: { lt: checkOutDate },
-        checkOut: { gt: checkInDate },
-      },
-    });
-
-    if (conflictingBooking) {
-      return res.status(409).json({ error: "Booking dates conflict with an existing booking" });
-    }
-
     const totalDays = Math.ceil(
       (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24),
     );
 
-    const booking = await prisma.booking.create({
-      data: {
-        guestId: effectiveUserId,
-        listingId: parsedListingId,
-        checkIn: checkInDate,
-        checkOut: checkOutDate,
-        guests: parsedGuests,
-        totalPrice: totalDays * listing.pricePerNight,
-        status: "PENDING",
-      },
-      include: {
-        listing: true,
-        guest: true,
-      },
-    });
+    const totalPrice = totalDays * listing.pricePerNight;
 
     try {
-      await sendEmail({
-        to: booking.guest.email,
-        subject: "Booking Confirmation",
-        html: bookingConfirmationEmail(
-          booking.guest.name,
-          booking.listing.title,
-          booking.listing.location,
-          checkInDate.toDateString(),
-          checkOutDate.toDateString(),
-          booking.totalPrice,
-        ),
-      });
-    } catch (error) {
-      console.error("Failed to send booking email:", error);
-    }
+      const booking = await prisma.$transaction(async (tx) => {
+        // Check for date conflicts inside the transaction
+        const conflict = await tx.booking.findFirst({
+          where: {
+            listingId: parsedListingId,
+            status: "CONFIRMED",
+            checkIn: { lt: checkOutDate },
+            checkOut: { gt: checkInDate },
+          },
+        });
 
-    return res.status(201).json(booking);
+        if (conflict) {
+          throw new Error("BOOKING_CONFLICT");
+        }
+
+        return tx.booking.create({
+          data: { listingId: parsedListingId, guestId: effectiveUserId, checkIn: checkInDate, checkOut: checkOutDate, guests: parsedGuests, totalPrice, status: "PENDING" },
+          include: {
+            listing: true,
+            guest: true,
+          },
+        });
+      });
+
+      try {
+        await sendEmail({
+          to: booking.guest.email,
+          subject: "Booking Confirmation",
+          html: bookingConfirmationEmail(
+            booking.guest.name,
+            booking.listing.title,
+            booking.listing.location,
+            checkInDate.toDateString(),
+            checkOutDate.toDateString(),
+            booking.totalPrice,
+          ),
+        });
+      } catch (error) {
+        console.error("Failed to send booking email:", error);
+      }
+
+      return res.status(201).json(booking);
+    } catch (error) {
+      if (error instanceof Error && error.message === "BOOKING_CONFLICT") {
+        return res.status(409).json({ error: "Booking dates conflict with an existing booking" });
+      }
+      throw error;
+    }
   } catch {
     return res.status(500).json({ error: "Something went wrong" });
   }

@@ -53,8 +53,8 @@ export async function getAllBookings(req, res) {
 }
 export async function getBookingById(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
-        if (Number.isNaN(id)) {
+        const id = req.params["id"];
+        if (!id) {
             return res.status(400).json({ error: "Invalid booking ID" });
         }
         const booking = await prisma.booking.findUnique({
@@ -79,8 +79,8 @@ export async function createBooking(req, res) {
         if (!listingId || !checkIn || !checkOut || !guests || (!userId && !req.userId)) {
             return res.status(400).json({ error: "userId, listingId, checkIn, checkOut and guests are required" });
         }
-        const effectiveUserId = Number(userId ?? req.userId);
-        const parsedListingId = Number(listingId);
+        const effectiveUserId = userId ?? req.userId;
+        const parsedListingId = listingId;
         const parsedGuests = Number(guests);
         const checkInDate = new Date(checkIn);
         const checkOutDate = new Date(checkOut);
@@ -88,8 +88,8 @@ export async function createBooking(req, res) {
         if (req.userId && userId && effectiveUserId !== req.userId && req.role !== "ADMIN") {
             return res.status(403).json({ error: "You can only create bookings for your own account" });
         }
-        if (Number.isNaN(effectiveUserId) ||
-            Number.isNaN(parsedListingId) ||
+        if (!effectiveUserId ||
+            !parsedListingId ||
             Number.isNaN(parsedGuests) ||
             Number.isNaN(checkInDate.getTime()) ||
             Number.isNaN(checkOutDate.getTime())) {
@@ -111,44 +111,48 @@ export async function createBooking(req, res) {
         if (!listing) {
             return res.status(404).json({ error: "Listing not found" });
         }
-        const conflictingBooking = await prisma.booking.findFirst({
-            where: {
-                listingId: parsedListingId,
-                status: "CONFIRMED",
-                checkIn: { lt: checkOutDate },
-                checkOut: { gt: checkInDate },
-            },
-        });
-        if (conflictingBooking) {
-            return res.status(409).json({ error: "Booking dates conflict with an existing booking" });
-        }
         const totalDays = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
-        const booking = await prisma.booking.create({
-            data: {
-                guestId: effectiveUserId,
-                listingId: parsedListingId,
-                checkIn: checkInDate,
-                checkOut: checkOutDate,
-                guests: parsedGuests,
-                totalPrice: totalDays * listing.pricePerNight,
-                status: "PENDING",
-            },
-            include: {
-                listing: true,
-                guest: true,
-            },
-        });
+        const totalPrice = totalDays * listing.pricePerNight;
         try {
-            await sendEmail({
-                to: booking.guest.email,
-                subject: "Booking Confirmation",
-                html: bookingConfirmationEmail(booking.guest.name, booking.listing.title, booking.listing.location, checkInDate.toDateString(), checkOutDate.toDateString(), booking.totalPrice),
+            const booking = await prisma.$transaction(async (tx) => {
+                // Check for date conflicts inside the transaction
+                const conflict = await tx.booking.findFirst({
+                    where: {
+                        listingId: parsedListingId,
+                        status: "CONFIRMED",
+                        checkIn: { lt: checkOutDate },
+                        checkOut: { gt: checkInDate },
+                    },
+                });
+                if (conflict) {
+                    throw new Error("BOOKING_CONFLICT");
+                }
+                return tx.booking.create({
+                    data: { listingId: parsedListingId, guestId: effectiveUserId, checkIn: checkInDate, checkOut: checkOutDate, guests: parsedGuests, totalPrice, status: "PENDING" },
+                    include: {
+                        listing: true,
+                        guest: true,
+                    },
+                });
             });
+            try {
+                await sendEmail({
+                    to: booking.guest.email,
+                    subject: "Booking Confirmation",
+                    html: bookingConfirmationEmail(booking.guest.name, booking.listing.title, booking.listing.location, checkInDate.toDateString(), checkOutDate.toDateString(), booking.totalPrice),
+                });
+            }
+            catch (error) {
+                console.error("Failed to send booking email:", error);
+            }
+            return res.status(201).json(booking);
         }
         catch (error) {
-            console.error("Failed to send booking email:", error);
+            if (error instanceof Error && error.message === "BOOKING_CONFLICT") {
+                return res.status(409).json({ error: "Booking dates conflict with an existing booking" });
+            }
+            throw error;
         }
-        return res.status(201).json(booking);
     }
     catch {
         return res.status(500).json({ error: "Something went wrong" });
@@ -156,9 +160,9 @@ export async function createBooking(req, res) {
 }
 export async function updateBookingStatus(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
+        const id = req.params["id"];
         const { status } = req.body;
-        if (Number.isNaN(id)) {
+        if (!id) {
             return res.status(400).json({ error: "Invalid booking ID" });
         }
         if (!status) {
@@ -186,8 +190,8 @@ export async function updateBookingStatus(req, res) {
 }
 export async function deleteBooking(req, res) {
     try {
-        const id = parseInt(req.params["id"], 10);
-        if (Number.isNaN(id)) {
+        const id = req.params["id"];
+        if (!id) {
             return res.status(400).json({ error: "Invalid booking ID" });
         }
         const booking = await prisma.booking.findUnique({

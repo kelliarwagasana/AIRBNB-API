@@ -16,8 +16,9 @@ import { authenticate, requireGuest } from "../middleware/auth.middleware.js";
  *       type: object
  *       properties:
  *         id:
- *           type: integer
- *           example: 1
+ *           type: string
+ *           format: uuid
+ *           example: 7fd37a18-c918-4f09-a5f8-453b6d53a4cc
  *         name:
  *           type: string
  *           example: Alice
@@ -37,8 +38,9 @@ import { authenticate, requireGuest } from "../middleware/auth.middleware.js";
  *       type: object
  *       properties:
  *         id:
- *           type: integer
- *           example: 10
+ *           type: string
+ *           format: uuid
+ *           example: 71666a39-12e3-4639-ba21-6b76eed83155
  *         title:
  *           type: string
  *           example: Sea View Apartment
@@ -53,14 +55,17 @@ import { authenticate, requireGuest } from "../middleware/auth.middleware.js";
  *       type: object
  *       properties:
  *         id:
- *           type: integer
- *           example: 5
+ *           type: string
+ *           format: uuid
+ *           example: b1d0f73f-251d-43b0-8ed8-28ef1f88f2f1
  *         guestId:
- *           type: integer
- *           example: 1
+ *           type: string
+ *           format: uuid
+ *           example: 7fd37a18-c918-4f09-a5f8-453b6d53a4cc
  *         listingId:
- *           type: integer
- *           example: 10
+ *           type: string
+ *           format: uuid
+ *           example: 71666a39-12e3-4639-ba21-6b76eed83155
  *         checkIn:
  *           type: string
  *           format: date-time
@@ -90,8 +95,9 @@ import { authenticate, requireGuest } from "../middleware/auth.middleware.js";
  *       required: [listingId, checkIn, checkOut]
  *       properties:
  *         listingId:
- *           type: integer
- *           example: 10
+ *           type: string
+ *           format: uuid
+ *           example: 71666a39-12e3-4639-ba21-6b76eed83155
  *         checkIn:
  *           type: string
  *           format: date-time
@@ -105,7 +111,7 @@ const router = Router();
 
 /**
  * @swagger
- * /bookings:
+ * /api/v1/bookings:
  *   get:
  *     summary: Get all bookings
  *     tags: [Bookings]
@@ -144,7 +150,7 @@ router.get("/", authenticate, getAllBookings);
 
 /**
  * @swagger
- * /bookings/{id}:
+ * /api/v1/bookings/{id}:
  *   get:
  *     summary: Get a booking by ID
  *     tags: [Bookings]
@@ -155,7 +161,8 @@ router.get("/", authenticate, getAllBookings);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The booking ID
  *     responses:
  *       200:
@@ -181,7 +188,7 @@ router.get("/:id", authenticate, getBookingById);
 
 /**
  * @swagger
- * /bookings:
+ * /api/v1/bookings:
  *   post:
  *     summary: Create a booking
  *     description: total is auto-calculated from pricePerNight x nights
@@ -226,7 +233,7 @@ router.patch("/:id/status", updateBookingStatus);
 
 /**
  * @swagger
- * /bookings/{id}:
+ * /api/v1/bookings/{id}:
  *   delete:
  *     summary: Cancel a booking
  *     tags: [Bookings]
@@ -237,7 +244,8 @@ router.patch("/:id/status", updateBookingStatus);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The booking ID
  *     responses:
  *       200:

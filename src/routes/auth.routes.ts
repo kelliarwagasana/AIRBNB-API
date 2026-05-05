@@ -12,7 +12,7 @@ const router = Router();
 
 /**
  * @swagger
- * /auth/register:
+ * /api/v1/auth/register:
  *   post:
  *     tags: [Auth]
  *     summary: Register a new user
@@ -53,7 +53,7 @@ router.post("/register", register);
 
 /**
  * @swagger
- * /auth/login:
+ * /api/v1/auth/login:
  *   post:
  *     tags: [Auth]
  *     summary: Login user
@@ -90,7 +90,7 @@ router.post("/login", login);
 
 /**
  * @swagger
- * /auth/change-password:
+ * /api/v1/auth/change-password:
  *   post:
  *     tags: [Auth]
  *     summary: Change user password
@@ -139,7 +139,7 @@ router.post("/change-password", authenticate, changePassword);
 
 /**
  * @swagger
- * /auth/forgot-password:
+ * /api/v1/auth/forgot-password:
  *   post:
  *     tags: [Auth]
  *     summary: Request password reset email
@@ -172,7 +172,7 @@ router.post("/forgot-password", forgotPassword);
 
 /**
  * @swagger
- * /auth/reset-password/{token}:
+ * /api/v1/auth/reset-password/{token}:
  *   post:
  *     tags: [Auth]
  *     summary: Reset password using token

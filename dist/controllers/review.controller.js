@@ -15,10 +15,11 @@ async function refreshListingRating(listingId) {
 function invalidateReviewCaches(listingId) {
     clearCacheByPrefix(`reviews:listing:${listingId}:`);
     clearCacheByPrefix("listings:list:");
+    clearCacheByPrefix(`ai:review-summary:${listingId}`);
 }
 export async function getListingReviews(req, res) {
     try {
-        const listingId = parseInt(req.params["id"], 10);
+        const listingId = req.params["id"];
         const page = parseInt(req.query["page"] ?? "1", 10);
         const limit = parseInt(req.query["limit"] ?? "10", 10);
         if (Number.isNaN(listingId)) {
@@ -74,17 +75,17 @@ export async function getListingReviews(req, res) {
 }
 export async function createReview(req, res) {
     try {
-        const listingId = parseInt(req.params["id"], 10);
+        const listingId = req.params["id"];
         const { userId, rating, comment } = req.body;
-        if (Number.isNaN(listingId)) {
+        if (!listingId) {
             return res.status(400).json({ error: "Invalid listing ID" });
         }
         if ((!userId && !req.userId) || rating === undefined || !comment) {
             return res.status(400).json({ error: "userId, rating and comment are required" });
         }
-        const reviewerId = Number(userId ?? req.userId);
+        const reviewerId = userId ?? req.userId;
         const numericRating = Number(rating);
-        if (Number.isNaN(reviewerId)) {
+        if (!reviewerId) {
             return res.status(400).json({ error: "Invalid userId" });
         }
         if (req.userId && userId && reviewerId !== req.userId && req.role !== "ADMIN") {

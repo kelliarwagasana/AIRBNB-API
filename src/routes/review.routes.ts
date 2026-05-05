@@ -10,8 +10,9 @@ import { authenticate } from "../middleware/auth.middleware.js";
  *       type: object
  *       properties:
  *         id:
- *           type: integer
- *           example: 1
+ *           type: string
+ *           format: uuid
+ *           example: 7fd37a18-c918-4f09-a5f8-453b6d53a4cc
  *         name:
  *           type: string
  *           example: Alice
@@ -38,10 +39,12 @@ import { authenticate } from "../middleware/auth.middleware.js";
  *           format: date-time
  *           example: 2026-04-29T12:00:00.000Z
  *         listingId:
- *           type: integer
- *           example: 12
+ *           type: string
+ *           format: uuid
+ *           example: 71666a39-12e3-4639-ba21-6b76eed83155
  *         reviewerId:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *           example: 3
  *         reviewer:
  *           $ref: '#/components/schemas/ReviewReviewer'
@@ -63,7 +66,7 @@ const router = Router();
 
 /**
  * @swagger
- * /listings/{id}/reviews:
+ * /api/v1/listings/{id}/reviews:
  *   get:
  *     summary: Get all reviews for a listing
  *     tags: [Reviews]
@@ -72,7 +75,8 @@ const router = Router();
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The listing ID
  *       - in: query
  *         name: page
@@ -120,7 +124,7 @@ router.get("/listings/:id/reviews", getListingReviews);
 
 /**
  * @swagger
- * /listings/{id}/reviews:
+ * /api/v1/listings/{id}/reviews:
  *   post:
  *     summary: Create a review for a listing
  *     description: rating must be between 1 and 5
@@ -132,7 +136,8 @@ router.get("/listings/:id/reviews", getListingReviews);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The listing ID
  *     requestBody:
  *       required: true
@@ -170,7 +175,7 @@ router.post("/listings/:id/reviews", authenticate, createReview);
 
 /**
  * @swagger
- * /reviews/{id}:
+ * /api/v1/reviews/{id}:
  *   delete:
  *     summary: Delete a review
  *     tags: [Reviews]

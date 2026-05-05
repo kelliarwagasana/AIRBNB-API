@@ -52,7 +52,7 @@ const options = {
                 User: {
                     type: "object",
                     properties: {
-                        id: { type: "integer", example: 1 },
+                        id: { type: "string", format: "uuid", example: "7fd37a18-c918-4f09-a5f8-453b6d53a4cc" },
                         name: { type: "string", example: "John Doe" },
                         email: { type: "string", format: "email", example: "john@example.com" },
                         username: { type: "string", example: "johndoe" },
@@ -61,6 +61,61 @@ const options = {
                         avatar: { type: "string", nullable: true, example: null },
                         createdAt: { type: "string", format: "date-time", example: "2026-04-29T00:00:00.000Z" },
                         updatedAt: { type: "string", format: "date-time", example: "2026-04-29T00:00:00.000Z" },
+                    },
+                },
+                Listing: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", example: "71666a39-12e3-4639-ba21-6b76eed83155" },
+                        title: { type: "string", example: "Beautiful Beach House" },
+                        description: { type: "string", example: "A lovely beach house with ocean views" },
+                        location: { type: "string", example: "Miami Beach" },
+                        type: { type: "string", enum: ["APARTMENT", "HOUSE", "VILLA", "CABIN"], example: "HOUSE" },
+                        pricePerNight: { type: "number", example: 150 },
+                        guests: { type: "integer", example: 4 },
+                        amenities: {
+                            type: "array",
+                            items: { type: "string" },
+                            example: ["WiFi", "Pool", "Kitchen"],
+                        },
+                        rating: { type: "number", nullable: true, example: 4.7 },
+                        hostId: { type: "string", example: "7fd37a18-c918-4f09-a5f8-453b6d53a4cc" },
+                        createdAt: { type: "string", format: "date-time", example: "2026-04-29T00:00:00.000Z" },
+                        updatedAt: { type: "string", format: "date-time", example: "2026-04-29T00:00:00.000Z" },
+                    },
+                },
+                CreateListingInput: {
+                    type: "object",
+                    required: ["title", "location", "pricePerNight"],
+                    properties: {
+                        title: { type: "string", example: "Beautiful Beach House" },
+                        description: { type: "string", example: "A lovely beach house with ocean views" },
+                        location: { type: "string", example: "Miami Beach" },
+                        type: { type: "string", enum: ["APARTMENT", "HOUSE", "VILLA", "CABIN"], example: "HOUSE" },
+                        pricePerNight: { type: "number", example: 150 },
+                        guests: { type: "integer", example: 4 },
+                        amenities: {
+                            type: "array",
+                            items: { type: "string" },
+                            example: ["WiFi", "Pool", "Kitchen"],
+                        },
+                    },
+                },
+                UpdateListingInput: {
+                    type: "object",
+                    properties: {
+                        title: { type: "string", example: "Updated Beach House Title" },
+                        description: { type: "string", example: "Updated description" },
+                        location: { type: "string", example: "Miami Beach" },
+                        type: { type: "string", enum: ["APARTMENT", "HOUSE", "VILLA", "CABIN"], example: "HOUSE" },
+                        pricePerNight: { type: "number", example: 200 },
+                        guests: { type: "integer", example: 6 },
+                        amenities: {
+                            type: "array",
+                            items: { type: "string" },
+                            example: ["WiFi", "Pool", "Kitchen"],
+                        },
+                        rating: { type: "number", nullable: true, example: 4.8 },
                     },
                 },
                 ErrorResponse: {

@@ -6,7 +6,6 @@ import {
   updateListing,
   deleteListing,
   searchListings,
-  getListingStats,
 } from "../controllers/listings.controller.js";
 import { authenticate, requireHost } from "../middleware/auth.middleware.js";
 
@@ -14,7 +13,7 @@ const router = Router();
 
 /**
  * @swagger
- * /listings:
+ * /api/v1/listings:
  *   get:
  *     summary: Get all listings
  *     description: Returns a paginated list of listings with optional filters
@@ -84,11 +83,10 @@ const router = Router();
  */
 router.get("/", getAllListings);
 router.get("/search", searchListings);
-router.get("/stats", getListingStats);
 
 /**
  * @swagger
- * /listings/{id}:
+ * /api/v1/listings/{id}:
  *   get:
  *     summary: Get a listing by ID
  *     tags: [Listings]
@@ -97,7 +95,8 @@ router.get("/stats", getListingStats);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The listing ID
  *     responses:
  *       200:
@@ -117,7 +116,7 @@ router.get("/:id", getListingById);
 
 /**
  * @swagger
- * /listings:
+ * /api/v1/listings:
  *   post:
  *     summary: Create a new listing
  *     tags: [Listings]
@@ -162,7 +161,7 @@ router.post("/", authenticate, requireHost, createListing);
 
 /**
  * @swagger
- * /listings/{id}:
+ * /api/v1/listings/{id}:
  *   put:
  *     summary: Update a listing
  *     tags: [Listings]
@@ -173,7 +172,8 @@ router.post("/", authenticate, requireHost, createListing);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The listing ID
  *     requestBody:
  *       content:
@@ -207,7 +207,7 @@ router.put("/:id", authenticate, updateListing);
 
 /**
  * @swagger
- * /listings/{id}:
+ * /api/v1/listings/{id}:
  *   delete:
  *     summary: Delete a listing
  *     tags: [Listings]
@@ -218,7 +218,8 @@ router.put("/:id", authenticate, updateListing);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *         description: The listing ID
  *     responses:
  *       200:

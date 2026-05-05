@@ -5,7 +5,7 @@ export async function uploadAvatar(req, res) {
     try {
         console.log("File:", req.file);
         console.log("Body:", req.body);
-        const userId = Number(req.params.id);
+        const userId = req.params.id;
         // 1. Ownership check
         if (req.userId !== userId) {
             return res.status(403).json({ error: "Forbidden" });
@@ -59,7 +59,7 @@ export async function uploadAvatar(req, res) {
 // DELETE /users/:id/avatar
 export async function deleteAvatar(req, res) {
     try {
-        const userId = Number(req.params.id);
+        const userId = req.params.id;
         // 1. Ownership check
         if (req.userId !== userId) {
             return res.status(403).json({ error: "Forbidden" });
@@ -102,7 +102,7 @@ export async function deleteAvatar(req, res) {
 // POST /listings/:id/photos
 export async function uploadListingPhotos(req, res) {
     try {
-        const listingId = Number(req.params.id);
+        const listingId = req.params.id;
         // 1. Require authenticate (already handled by middleware)
         // 2. Find listing
         const listing = await prisma.listing.findUnique({
@@ -163,8 +163,8 @@ export async function uploadListingPhotos(req, res) {
 // DELETE /listings/:id/photos/:photoId
 export async function deleteListingPhoto(req, res) {
     try {
-        const listingId = Number(req.params.id);
-        const photoId = Number(req.params.photoId);
+        const listingId = req.params.id;
+        const photoId = parseInt(req.params.photoId, 10);
         // 1. Require authenticate (already handled by middleware)
         // 2. Find listing
         const listing = await prisma.listing.findUnique({
