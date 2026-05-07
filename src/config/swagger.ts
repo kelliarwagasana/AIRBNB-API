@@ -16,7 +16,7 @@ const options: swaggerJsdoc.Options = {
         description: "Development server",
       },
        {
-        url: "https://airbnb-api-1-fsuj.onrender.com/",
+        url: "https://airbnb-api-1postgresql-airbnb-db-s4dz.onrender.com//",
         description: "Production server",
       },
     ],
