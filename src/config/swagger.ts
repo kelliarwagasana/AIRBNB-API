@@ -12,7 +12,7 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: "http://localhost:3000",
+        url: "http://localhost:4000",
         description: "Development server",
       },
        {
@@ -138,7 +138,7 @@ const options: swaggerJsdoc.Options = {
       },
     ],
   },
-  apis: ["./src/routes/*.ts"],
+  apis: ["./src/routes/**/*.ts", "./src/index.ts"],
 };
 
 function createSwaggerSpec() {
@@ -186,10 +186,10 @@ export function setupSwagger(app: Express) {
         })
     );
 
-  app.get("/api-docs.json", (_req, res) => {
-    res.setHeader("Content-Type", "application/json");
-    res.send(swaggerSpec);
-  });
+  // app.get("/api-docs.json", (_req, res) => {
+  //   res.setHeader("Content-Type", "application/json");
+  //   res.send(swaggerSpec);
+  // });
 
   console.log("Swagger docs available at http://localhost:3000/api-docs");
 }

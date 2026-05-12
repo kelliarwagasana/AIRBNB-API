@@ -104,7 +104,7 @@ export async function forgotPassword(req, res) {
                 resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000),
             },
         });
-        const resetLink = `${process.env["API_URL"] || "http://localhost:3000"}/auth/reset-password/${rawToken}`;
+        const resetLink = `${process.env["API_URL"] || "http://localhost:3000"}/api/v1/auth/reset-password/${rawToken}`;
         try {
             await sendEmail({
                 to: user.email,

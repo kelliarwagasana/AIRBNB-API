@@ -5,8 +5,8 @@ import {
   login,
   register,
   resetPassword,
-} from "../controllers/auth.controller.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+} from "../../controllers/auth.controller.js";
+import { authenticate } from "../../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -115,25 +115,10 @@ router.post("/login", login);
  *     responses:
  *       200:
  *         description: Password changed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
  *       400:
  *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Current password is incorrect or unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/change-password", authenticate, changePassword);
 
@@ -183,7 +168,7 @@ router.post("/forgot-password", forgotPassword);
  *         schema:
  *           type: string
  *         description: Password reset token
- *         example: abc123def456...
+ *         example: "abc123def456"
  *     requestBody:
  *       required: true
  *       content:

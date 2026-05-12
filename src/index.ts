@@ -1,18 +1,13 @@
 import "dotenv/config";
 import compression from "compression";
 import express from "express";
-import userRoutes from "./routes/users.route.js";
-import listingRoutes from "./routes/listings.route.js";
-import bookingRoutes from "./routes/bookings.route.js";
-import authRoutes from "./routes/auth.routes.js";
-import aiRoutes from "./routes/ai.routes.js";
-import reviewRoutes from "./routes/review.routes.js";
-import uploadRoutes from "./routes/upload.routes.js";
 import { connectDB } from "./lib/prisma.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { logger } from "./lib/logger.js";
 import { setupSwagger } from "./config/swagger.js"; 
 import { generalLimiter, strictLimiter } from "./middleware/rateLimiter.js";
+import v1Router from "./routes/v1/index.js";
+import { Request, Response } from "express";
 
 const app = express();
 setupSwagger(app);
@@ -28,15 +23,16 @@ app.use((req, res, next) => {
 
   next();
 });
+app.get("/health", (req: Request, res: Response) => {
+  res.json({ 
+    status: "ok", 
+    uptime: process.uptime(), 
+    timestamp: new Date() 
+  });
+});
 
 // connect routes
-app.use("/api/v1/users", userRoutes);
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/listings", listingRoutes);
-app.use("/api/v1/bookings", bookingRoutes);
-app.use("/api/v1", reviewRoutes);
-app.use("/api/v1/upload", uploadRoutes);
-app.use("/api/v1/ai", aiRoutes);
+app.use("/api/v1", v1Router);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

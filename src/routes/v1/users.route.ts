@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { getAllUsers, getUserById, createUser, updateUser, deleteUser, getUserListings, getUserBookings } from "../controllers/users.controller.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+import { getAllUsers, getUserById, createUser, updateUser, deleteUser, getUserListings, getUserBookings } from "../../controllers/users.controller.js";
+import { authenticate } from "../../middleware/auth.middleware.js";
 
 /**
  * @swagger
@@ -246,7 +246,7 @@ router.get("/:id/bookings", authenticate, getUserBookings);
 
 /**
  * @swagger
- * /users:
+ * /api/v1/users:
  *   post:
  *     summary: Create a new user
  *     tags: [Users]
@@ -270,7 +270,7 @@ router.post("/", createUser);
 
 /**
  * @swagger
- * /users/create:
+ * /api/v1/users/create:
  *   post:
  *     summary: Create a new user (alternative route)
  *     tags: [Users]
@@ -290,7 +290,7 @@ router.post("/create", createUser);
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/v1/users/{id}:
  *   put:
  *     summary: Update a user
  *     tags: [Users]
@@ -342,7 +342,7 @@ router.put("/:id", authenticate, updateUser);
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/v1/users/{id}:
  *   delete:
  *     summary: Delete a user
  *     tags: [Users]

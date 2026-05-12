@@ -151,7 +151,7 @@ export async function forgotPassword(req: Request, res: Response) {
 
     const resetLink = `${
       process.env["API_URL"] || "http://localhost:3000"
-    }/auth/reset-password/${rawToken}`;
+    }/api/v1/auth/reset-password/${rawToken}`;
 
     try {
       await sendEmail({

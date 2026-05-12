@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { createReview, deleteReview, getListingReviews } from "../controllers/review.controller.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+import { createReview, deleteReview, getListingReviews } from "../../controllers/review.controller.js";
+import { authenticate } from "../../middleware/auth.middleware.js";
 
 /**
  * @swagger

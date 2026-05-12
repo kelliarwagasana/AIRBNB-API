@@ -14,7 +14,7 @@ const options = {
                 description: "Development server",
             },
             {
-                url: "https://airbnb-api-1-fsuj.onrender.com/",
+                url: "https://airbnb-api-1postgresql-airbnb-db-s4dz.onrender.com//",
                 description: "Production server",
             },
         ],
@@ -136,7 +136,7 @@ const options = {
             },
         ],
     },
-    apis: ["./src/routes/*.ts"],
+    apis: ["./src/routes/**/*.ts", "./src/index.ts"],
 };
 function createSwaggerSpec() {
     const originalEmitWarning = process.emitWarning.bind(process);
@@ -170,9 +170,9 @@ export function setupSwagger(app) {
             persistAuthorization: true,
         },
     }));
-    app.get("/api-docs.json", (_req, res) => {
-        res.setHeader("Content-Type", "application/json");
-        res.send(swaggerSpec);
-    });
+    // app.get("/api-docs.json", (_req, res) => {
+    //   res.setHeader("Content-Type", "application/json");
+    //   res.send(swaggerSpec);
+    // });
     console.log("Swagger docs available at http://localhost:3000/api-docs");
 }

@@ -5,8 +5,8 @@ import {
   getAllBookings,
   getBookingById,
   updateBookingStatus,
-} from "../controllers/bookings.controller.js";
-import { authenticate, requireGuest } from "../middleware/auth.middleware.js";
+} from "../../controllers/bookings.controller.js";
+import { authenticate, requireGuest } from "../../middleware/auth.middleware.js";
 
 /**
  * @swagger
@@ -229,6 +229,43 @@ router.get("/:id", authenticate, getBookingById);
  */
 router.post("/", authenticate, requireGuest, createBooking);
 
+/**
+ * @swagger
+ * /api/v1/bookings/{id}/status:
+ *   patch:
+ *     summary: Update booking status
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The booking ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [PENDING, CONFIRMED, CANCELLED]
+ *     responses:
+ *       200:
+ *         description: Booking status updated successfully
+ *       400:
+ *         description: Invalid status update request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Booking not found
+ */
 router.patch("/:id/status", updateBookingStatus);
 
 /**

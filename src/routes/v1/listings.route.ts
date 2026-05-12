@@ -6,8 +6,8 @@ import {
   updateListing,
   deleteListing,
   searchListings,
-} from "../controllers/listings.controller.js";
-import { authenticate, requireHost } from "../middleware/auth.middleware.js";
+} from "../../controllers/listings.controller.js";
+import { authenticate, requireHost } from "../../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -82,6 +82,39 @@ const router = Router();
  *                       type: integer
  */
 router.get("/", getAllListings);
+/**
+ * @swagger
+ * /api/v1/listings/search:
+ *   get:
+ *     summary: Search listings
+ *     description: Search listings using query filters
+ *     tags: [Listings]
+ *     parameters:
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [apartment, house, villa, cabin]
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: guests
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Matching listings
+ */
 router.get("/search", searchListings);
 
 /**

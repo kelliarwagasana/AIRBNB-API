@@ -5,14 +5,14 @@ import {
   chatWithAi,
   recommendListings,
   getListingReviewSummary,
-} from "../controllers/ai.controller.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+} from "../../controllers/ai.controller.js";
+import { authenticate } from "../../middleware/auth.middleware.js";
 
 
 const router = Router();
 /**
  * @swagger
- * /api/v1/ai/search :
+ * /api/v1/ai/search:
  *  post:
  *    summary: Search listings using natural language
  *    description: Convert a natural language search query into listing filters and return matching results.
