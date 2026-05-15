@@ -16,8 +16,22 @@ export async function getAllBookings(req, res) {
             return res.status(400).json({ error: "Invalid pagination parameters" });
         }
         const { page, limit, skip } = pagination;
+        const where = {};
+        const status = String(req.query["status"] ?? "").toUpperCase();
+        const dateFrom = req.query["dateFrom"] ? new Date(String(req.query["dateFrom"])) : null;
+        const dateTo = req.query["dateTo"] ? new Date(String(req.query["dateTo"])) : null;
+        if (["PENDING", "CONFIRMED", "CANCELLED"].includes(status)) {
+            where.status = status;
+        }
+        if (dateFrom && !Number.isNaN(dateFrom.getTime())) {
+            where.checkIn = { ...(typeof where.checkIn === "object" ? where.checkIn : {}), gte: dateFrom };
+        }
+        if (dateTo && !Number.isNaN(dateTo.getTime())) {
+            where.checkOut = { ...(typeof where.checkOut === "object" ? where.checkOut : {}), lte: dateTo };
+        }
         const [bookings, total] = await Promise.all([
             prisma.booking.findMany({
+                where,
                 include: {
                     guest: {
                         select: {
@@ -35,7 +49,7 @@ export async function getAllBookings(req, res) {
                 skip,
                 take: limit,
             }),
-            prisma.booking.count(),
+            prisma.booking.count({ where }),
         ]);
         return res.json({
             data: bookings,
@@ -73,21 +87,96 @@ export async function getBookingById(req, res) {
         return res.status(500).json({ error: "Something went wrong" });
     }
 }
+export async function getMyBookings(req, res) {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const bookings = await prisma.booking.findMany({
+            where: {
+                guestId: req.userId,
+                status: { not: "CANCELLED" },
+            },
+            include: {
+                guest: true,
+                listing: {
+                    include: {
+                        photos: true,
+                        host: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                username: true,
+                                phone: true,
+                                role: true,
+                                avatar: true,
+                                createdAt: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+        return res.json(bookings);
+    }
+    catch {
+        return res.status(500).json({ error: "Something went wrong" });
+    }
+}
+export async function getHostBookings(req, res) {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const bookings = await prisma.booking.findMany({
+            where: {
+                listing: { hostId: req.userId },
+            },
+            include: {
+                guest: true,
+                listing: {
+                    include: {
+                        photos: true,
+                        host: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                username: true,
+                                phone: true,
+                                role: true,
+                                avatar: true,
+                                createdAt: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+        return res.json(bookings);
+    }
+    catch {
+        return res.status(500).json({ error: "Something went wrong" });
+    }
+}
 export async function createBooking(req, res) {
     try {
-        const { userId, listingId, checkIn, checkOut, guests } = req.body;
-        if (!listingId || !checkIn || !checkOut || !guests || (!userId && !req.userId)) {
-            return res.status(400).json({ error: "userId, listingId, checkIn, checkOut and guests are required" });
+        const { listingId, checkIn, checkOut, guests } = req.body;
+        if (!listingId || !checkIn || !checkOut || guests === undefined || guests === null) {
+            return res.status(400).json({ error: "listingId, checkIn, checkOut and guests are required" });
         }
-        const effectiveUserId = userId ?? req.userId;
+        if (!req.userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const effectiveUserId = req.userId;
         const parsedListingId = listingId;
         const parsedGuests = Number(guests);
         const checkInDate = new Date(checkIn);
         const checkOutDate = new Date(checkOut);
         const now = new Date();
-        if (req.userId && userId && effectiveUserId !== req.userId && req.role !== "ADMIN") {
-            return res.status(403).json({ error: "You can only create bookings for your own account" });
-        }
         if (!effectiveUserId ||
             !parsedListingId ||
             Number.isNaN(parsedGuests) ||
@@ -136,11 +225,7 @@ export async function createBooking(req, res) {
                 });
             });
             try {
-                await sendEmail({
-                    to: booking.guest.email,
-                    subject: "Booking Confirmation",
-                    html: bookingConfirmationEmail(booking.guest.name, booking.listing.title, booking.listing.location, checkInDate.toDateString(), checkOutDate.toDateString(), booking.totalPrice),
-                });
+                await sendEmail(booking.guest.email, "Booking Confirmation", bookingConfirmationEmail(booking.guest.name, booking.listing.title, booking.listing.location, checkInDate.toDateString(), checkOutDate.toDateString(), booking.totalPrice));
             }
             catch (error) {
                 console.error("Failed to send booking email:", error);
@@ -174,13 +259,28 @@ export async function updateBookingStatus(req, res) {
         }
         const booking = await prisma.booking.findUnique({
             where: { id },
+            include: { listing: true },
         });
         if (!booking) {
             return res.status(404).json({ error: "Booking not found" });
         }
+        const isListingHost = booking.listing.hostId === req.userId;
+        const isAdmin = req.role === "ADMIN";
+        if (!isListingHost && !isAdmin) {
+            return res.status(403).json({ error: "Only the listing host can update this booking" });
+        }
         const updatedBooking = await prisma.booking.update({
             where: { id },
             data: { status },
+            include: {
+                guest: true,
+                listing: {
+                    include: {
+                        photos: true,
+                        host: true,
+                    },
+                },
+            },
         });
         return res.json(updatedBooking);
     }
@@ -218,11 +318,7 @@ export async function deleteBooking(req, res) {
             },
         });
         try {
-            await sendEmail({
-                to: cancelledBooking.guest.email,
-                subject: "Booking Cancelled",
-                html: bookingCancellationEmail(cancelledBooking.guest.name, cancelledBooking.listing.title, cancelledBooking.checkIn.toDateString(), cancelledBooking.checkOut.toDateString()),
-            });
+            await sendEmail(cancelledBooking.guest.email, "Booking Cancelled", bookingCancellationEmail(cancelledBooking.guest.name, cancelledBooking.listing.title, cancelledBooking.checkIn.toDateString(), cancelledBooking.checkOut.toDateString()));
         }
         catch (error) {
             console.error("Failed to send cancellation email:", error);

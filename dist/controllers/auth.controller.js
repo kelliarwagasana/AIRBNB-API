@@ -7,52 +7,91 @@ import crypto from "crypto";
 import { passwordResetEmail } from "../templates/email.js";
 const JWT_SECRET = process.env["JWT_SECRET"];
 export async function register(req, res) {
-    const { name, email, phone, username, password, role } = req.body;
-    if (!name || !email || !phone || !username || !password) {
-        return res.status(400).json({ error: "All fields are required" });
+    const raw = req.body;
+    const name = String(raw["name"] ?? "").trim();
+    const email = String(raw["email"] ?? "").trim().toLowerCase();
+    const phone = String(raw["phone"] ?? "").trim();
+    const username = String(raw["username"] ?? "").trim();
+    const password = String(raw["password"] ?? "");
+    const role = raw["role"];
+    const missing = [];
+    if (!name)
+        missing.push("full name");
+    if (!email)
+        missing.push("email");
+    if (!phone)
+        missing.push("phone");
+    if (!username)
+        missing.push("username");
+    if (!password)
+        missing.push("password");
+    if (missing.length > 0) {
+        return res.status(400).json({
+            error: `Missing required field(s): ${missing.join(", ")}. Please fill in every field to create your account.`,
+        });
     }
     if (password.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters" });
+        return res.status(400).json({
+            error: "Password must be at least 8 characters long.",
+        });
     }
     const existing = await prisma.user.findFirst({
         where: { OR: [{ email }, { username }] },
     });
     if (existing) {
-        return res.status(409).json({ error: "Email or username already in use" });
+        return res.status(409).json({
+            error: "That email or username is already registered. Try logging in or use a different email or username.",
+        });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+    const normalizedRole = role === "HOST" ? "HOST" : "GUEST";
     const user = await prisma.user.create({
-        data: { name: name, email: email, username: username, phone: phone, password: hashedPassword, role: role ?? "GUEST" },
+        data: {
+            name,
+            email,
+            username,
+            phone,
+            password: hashedPassword,
+            role: normalizedRole,
+        },
     });
     try {
-        await sendEmail({ to: user.email, subject: "welcome to Airbnb", html: welcomeEmail(user.name, user.role), });
+        await sendEmail(user.email, "welcome to Airbnb", welcomeEmail(user.name, user.role));
     }
     catch (emailError) {
         console.error("Failed to send welcome email:", emailError);
     }
     const { password: _, ...userWithoutPassword } = user;
-    res.status(201).json(userWithoutPassword);
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    res.status(201).json({ user: userWithoutPassword, token, message: "user created successfully" });
 }
 //LOGsIN
 export async function login(req, res) {
-    const { email, password } = req.body;
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const password = String(req.body?.password ?? "");
     if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+        return res.status(400).json({
+            error: "Email and password are both required. Enter the email and password for your account.",
+        });
     }
     const user = await prisma.user.findUnique({ where: { email } });
     // Same error message whether email or password is wrong
     // Never tell the client which one failed — that leaks information
-    if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
+    if (!user || user.isActive === false) {
+        return res.status(401).json({
+            error: "Login failed. Check your email and password, then try again.",
+        });
     }
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({
+            error: "Login failed. Check your email and password, then try again.",
+        });
     }
     // Include role in the token so middleware can check it without a DB query
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
     const { password: _, ...userWithoutPassword } = user;
-    res.json({ token });
+    res.json({ user: userWithoutPassword, token });
 }
 //CHANDE-PASSWORD 
 export async function changePassword(req, res) {
@@ -80,13 +119,18 @@ export async function changePassword(req, res) {
 //FORGOT-PASSWORD
 export async function forgotPassword(req, res) {
     try {
-        const { email } = req.body;
+        const email = String(req.body?.email ?? "").trim().toLowerCase();
         if (!email) {
             return res.status(400).json({ error: "Email is required" });
         }
         const successResponse = {
-            message: "If this email exists, a reset link has been sent",
+            message: "If an account exists for that email, we sent password reset instructions. Check your inbox and spam folder.",
         };
+        const isDev = process.env["NODE_ENV"] !== "production";
+        // if (isDev && !isEmailConfigured()) {
+        //   successResponse.info =
+        //     "SMTP is not configured (set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_FROM). No email will be sent until then. In development, a reset link may be printed in the API server console when the account exists.";
+        // }
         const user = await prisma.user.findUnique({
             where: { email },
         });
@@ -104,13 +148,16 @@ export async function forgotPassword(req, res) {
                 resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000),
             },
         });
-        const resetLink = `${process.env["API_URL"] || "http://localhost:3000"}/api/v1/auth/reset-password/${rawToken}`;
+        const frontendUrl = process.env["FRONTEND_URL"] || "http://localhost:5173/#";
+        const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`;
+        // if (!isEmailConfigured()) {
+        //   if (isDev) {
+        //     console.info("\n[forgot-password] SMTP not configured — dev reset link (do not share):\n", resetLink, "\n");
+        //   }
+        //   return res.status(200).json(successResponse);
+        // }
         try {
-            await sendEmail({
-                to: user.email,
-                subject: "Reset your password 🔐",
-                html: passwordResetEmail(user.name, resetLink),
-            });
+            await sendEmail(user.email, "Reset your password 🔐", passwordResetEmail(user.name, resetLink));
         }
         catch (emailError) {
             console.error("❌ Failed to send reset email:", emailError);
@@ -150,4 +197,28 @@ export async function resetPassword(req, res) {
         },
     });
     res.json({ message: "Password reset successfully" });
+}
+export async function googleLogin(req, res) {
+    const raw = req.body;
+    const email = String(raw["email"] ?? "google.guest@airbnb.local").trim().toLowerCase();
+    const name = String(raw["name"] ?? "Google Guest").trim();
+    const user = await prisma.user.upsert({
+        where: { email },
+        update: {
+            name,
+            isActive: true,
+        },
+        create: {
+            name,
+            email,
+            username: `google_${crypto.randomBytes(4).toString("hex")}`,
+            phone: "0000000000",
+            password: await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10),
+            role: "GUEST",
+            isActive: true,
+        },
+    });
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ user: userWithoutPassword, token });
 }

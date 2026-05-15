@@ -12,11 +12,7 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: "http://localhost:4000",
-        description: "Development server",
-      },
-       {
-        url: "https://airbnb-api-1postgresql-airbnb-db-s4dz.onrender.com//",
+        url: "https://airbnb-api-1postgresql-airbnb-db-s4dz.onrender.com",
         description: "Production server",
       },
     ],
@@ -69,6 +65,15 @@ const options: swaggerJsdoc.Options = {
             updatedAt: { type: "string", format: "date-time", example: "2026-04-29T00:00:00.000Z" },
           },
         },
+        ListingPhoto: {
+          type: "object",
+          properties: {
+            id: { type: "integer", example: 1 },
+            url: { type: "string", example: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688" },
+            publicId: { type: "string", nullable: true, example: null },
+            listingId: { type: "string", example: "71666a39-12e3-4639-ba21-6b76eed83155" },
+          },
+        },
         Listing: {
           type: "object",
           properties: {
@@ -85,6 +90,22 @@ const options: swaggerJsdoc.Options = {
               example: ["WiFi", "Pool", "Kitchen"],
             },
             rating: { type: "number", nullable: true, example: 4.7 },
+            url: {
+              type: "string",
+              nullable: true,
+              description: "Cover image URL; set from the first photo on create/update when photos are provided.",
+              example: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+            },
+            coverUrl: {
+              type: "string",
+              nullable: true,
+              description: "Convenience field: first photo URL, else `url`.",
+              example: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+            },
+            photos: {
+              type: "array",
+              items: { $ref: "#/components/schemas/ListingPhoto" },
+            },
             hostId: { type: "string", example: "7fd37a18-c918-4f09-a5f8-453b6d53a4cc" },
             createdAt: { type: "string", format: "date-time", example: "2026-04-29T00:00:00.000Z" },
             updatedAt: { type: "string", format: "date-time", example: "2026-04-29T00:00:00.000Z" },
@@ -105,6 +126,19 @@ const options: swaggerJsdoc.Options = {
               items: { type: "string" },
               example: ["WiFi", "Pool", "Kitchen"],
             },
+            imageUrl: {
+              type: "string",
+              description: "Single cover image URL; also creates the first `ListingPhoto` and sets `Listing.url`.",
+              example: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+            },
+            photos: {
+              type: "array",
+              description: "Additional image URLs (strings) or `{ url }` objects; deduplicated; order preserved.",
+              items: {
+                oneOf: [{ type: "string" }, { type: "object", properties: { url: { type: "string" } } }],
+              },
+              example: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"],
+            },
           },
         },
         UpdateListingInput: {
@@ -122,6 +156,18 @@ const options: swaggerJsdoc.Options = {
               example: ["WiFi", "Pool", "Kitchen"],
             },
             rating: { type: "number", nullable: true, example: 4.8 },
+            imageUrl: {
+              type: "string",
+              description:
+                "If sent together with `photos` (or alone), replaces all `ListingPhoto` rows and sets `Listing.url` to the first URL.",
+            },
+            photos: {
+              type: "array",
+              description: "Combined with `imageUrl` into one ordered URL list; replaces existing photos when any URL is provided.",
+              items: {
+                oneOf: [{ type: "string" }, { type: "object", properties: { url: { type: "string" } } }],
+              },
+            },
           },
         },
         ErrorResponse: {
@@ -175,21 +221,25 @@ function createSwaggerSpec() {
 
 const swaggerSpec = createSwaggerSpec();
 
-export function setupSwagger(app: Express) {
-    app.use(
-        "/api-docs",
-        swaggerUi.serve,
-        swaggerUi.setup(swaggerSpec, {
-            swaggerOptions: {
-                persistAuthorization: true,
-            },
-        })
-    );
+export function setupSwagger(app: Express, port: number) {
+  const spec = {
+    ...swaggerSpec,
+    servers: [
+      { url: `http://localhost:${port}`, description: "Local server (PORT from .env)" },
+      ...(((swaggerSpec as { servers?: { url: string; description?: string }[] }).servers ??
+        []) as { url: string; description?: string }[]),
+    ],
+  };
 
-  // app.get("/api-docs.json", (_req, res) => {
-  //   res.setHeader("Content-Type", "application/json");
-  //   res.send(swaggerSpec);
-  // });
+  app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(spec, {
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    }),
+  );
 
-  console.log("Swagger docs available at http://localhost:3000/api-docs");
+  console.log(`Swagger docs available at http://localhost:${port}/api-docs`);
 }

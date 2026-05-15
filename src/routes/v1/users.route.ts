@@ -379,6 +379,6 @@ router.put("/:id", authenticate, updateUser);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete("/:id", authenticate, deleteUser);
+router.delete("/:id", deleteUser);
 
 export default router;

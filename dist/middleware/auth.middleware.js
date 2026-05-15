@@ -38,3 +38,9 @@ export function requireGuest(req, res, next) {
     }
     next();
 }
+export function requireAdmin(req, res, next) {
+    if (req.role !== "ADMIN") {
+        return res.status(403).json({ error: "Only admins can perform this action" });
+    }
+    next();
+}

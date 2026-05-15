@@ -31,6 +31,12 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum ListingStatus {
+  PENDING_APPROVAL
+  PUBLISHED
+  REJECTED
+}
+
 model User {
   id             String      @id @default(uuid())
   name           String
@@ -40,6 +46,7 @@ model User {
   role           Role     @default(GUEST)
   avatar         String?
   avatarPublicId String?
+  isActive       Boolean  @default(true)
   bio            String?
   createdAt      DateTime @default(now())
   password       String
@@ -52,6 +59,7 @@ model User {
   listings       Listing[]
   bookings       Booking[]
   reviews        Review[]
+  savedListings  SavedListing[]
 }
 
 model Listing {
@@ -64,6 +72,7 @@ model Listing {
   type           ListingType
   amenities      String[]
   rating         Float?
+  status         ListingStatus @default(PUBLISHED)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   url            String?
@@ -74,6 +83,7 @@ model Listing {
   @@index([location])
   @@index([type])
   @@index([pricePerNight])
+  @@index([status])
 
   hostId String
   host   User @relation(fields: [hostId], references: [id], onDelete: Cascade)
@@ -81,6 +91,19 @@ model Listing {
   bookings Booking[]
   photos   ListingPhoto[]
   reviews  Review[]
+  savedBy  SavedListing[]
+}
+
+model SavedListing {
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([userId])
 }
 
 model Booking {

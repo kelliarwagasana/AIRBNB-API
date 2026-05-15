@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import type { AuthRequest } from "../middleware/auth.middleware.js";
 import { sendEmail } from "../config/email.js";
@@ -24,9 +25,26 @@ export async function getAllBookings(req: AuthRequest, res: Response) {
     }
 
     const { page, limit, skip } = pagination;
+    const where: Prisma.BookingWhereInput = {};
+    const status = String(req.query["status"] ?? "").toUpperCase();
+    const dateFrom = req.query["dateFrom"] ? new Date(String(req.query["dateFrom"])) : null;
+    const dateTo = req.query["dateTo"] ? new Date(String(req.query["dateTo"])) : null;
+
+    if (["PENDING", "CONFIRMED", "CANCELLED"].includes(status)) {
+      where.status = status as Prisma.EnumBookingStatusFilter["equals"];
+    }
+
+    if (dateFrom && !Number.isNaN(dateFrom.getTime())) {
+      where.checkIn = { ...(typeof where.checkIn === "object" ? where.checkIn : {}), gte: dateFrom };
+    }
+
+    if (dateTo && !Number.isNaN(dateTo.getTime())) {
+      where.checkOut = { ...(typeof where.checkOut === "object" ? where.checkOut : {}), lte: dateTo };
+    }
 
     const [bookings, total] = await Promise.all([
       prisma.booking.findMany({
+        where,
         include: {
           guest: {
             select: {
@@ -44,7 +62,7 @@ export async function getAllBookings(req: AuthRequest, res: Response) {
         skip,
         take: limit,
       }),
-      prisma.booking.count(),
+      prisma.booking.count({ where }),
     ]);
 
     return res.json({
@@ -87,24 +105,103 @@ export async function getBookingById(req: AuthRequest, res: Response) {
   }
 }
 
-export async function createBooking(req: AuthRequest, res: Response) {
+export async function getMyBookings(req: AuthRequest, res: Response) {
   try {
-    const { userId, listingId, checkIn, checkOut, guests } = req.body;
-
-    if (!listingId || !checkIn || !checkOut || !guests || (!userId && !req.userId)) {
-      return res.status(400).json({ error: "userId, listingId, checkIn, checkOut and guests are required" });
+    if (!req.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const effectiveUserId = userId ?? req.userId;
+    const bookings = await prisma.booking.findMany({
+      where: {
+        guestId: req.userId,
+        status: { not: "CANCELLED" },
+      },
+      include: {
+        guest: true,
+        listing: {
+          include: {
+            photos: true,
+            host: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                username: true,
+                phone: true,
+                role: true,
+                avatar: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json(bookings);
+  } catch {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function getHostBookings(req: AuthRequest, res: Response) {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        listing: { hostId: req.userId },
+      },
+      include: {
+        guest: true,
+        listing: {
+          include: {
+            photos: true,
+            host: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                username: true,
+                phone: true,
+                role: true,
+                avatar: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json(bookings);
+  } catch {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function createBooking(req: AuthRequest, res: Response) {
+  try {
+    const { listingId, checkIn, checkOut, guests } = req.body;
+
+    if (!listingId || !checkIn || !checkOut || guests === undefined || guests === null) {
+      return res.status(400).json({ error: "listingId, checkIn, checkOut and guests are required" });
+    }
+
+    if (!req.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const effectiveUserId = req.userId;
     const parsedListingId = listingId;
     const parsedGuests = Number(guests);
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
     const now = new Date();
-
-    if (req.userId && userId && effectiveUserId !== req.userId && req.role !== "ADMIN") {
-      return res.status(403).json({ error: "You can only create bookings for your own account" });
-    }
 
     if (
       !effectiveUserId ||
@@ -168,10 +265,10 @@ export async function createBooking(req: AuthRequest, res: Response) {
       });
 
       try {
-        await sendEmail({
-          to: booking.guest.email,
-          subject: "Booking Confirmation",
-          html: bookingConfirmationEmail(
+        await sendEmail(
+          booking.guest.email,
+          "Booking Confirmation",
+          bookingConfirmationEmail(
             booking.guest.name,
             booking.listing.title,
             booking.listing.location,
@@ -179,7 +276,7 @@ export async function createBooking(req: AuthRequest, res: Response) {
             checkOutDate.toDateString(),
             booking.totalPrice,
           ),
-        });
+        );
       } catch (error) {
         console.error("Failed to send booking email:", error);
       }
@@ -217,15 +314,32 @@ export async function updateBookingStatus(req: AuthRequest, res: Response) {
 
     const booking = await prisma.booking.findUnique({
       where: { id },
+      include: { listing: true },
     });
 
     if (!booking) {
       return res.status(404).json({ error: "Booking not found" });
     }
 
+    const isListingHost = booking.listing.hostId === req.userId;
+    const isAdmin = req.role === "ADMIN";
+
+    if (!isListingHost && !isAdmin) {
+      return res.status(403).json({ error: "Only the listing host can update this booking" });
+    }
+
     const updatedBooking = await prisma.booking.update({
       where: { id },
       data: { status },
+      include: {
+        guest: true,
+        listing: {
+          include: {
+            photos: true,
+            host: true,
+          },
+        },
+      },
     });
 
     return res.json(updatedBooking);
@@ -270,16 +384,16 @@ export async function deleteBooking(req: AuthRequest, res: Response) {
     });
 
     try {
-      await sendEmail({
-        to: cancelledBooking.guest.email,
-        subject: "Booking Cancelled",
-        html: bookingCancellationEmail(
+      await sendEmail(
+        cancelledBooking.guest.email,
+        "Booking Cancelled",
+        bookingCancellationEmail(
           cancelledBooking.guest.name,
           cancelledBooking.listing.title,
           cancelledBooking.checkIn.toDateString(),
           cancelledBooking.checkOut.toDateString(),
         ),
-      });
+      );
     } catch (error) {
       console.error("Failed to send cancellation email:", error);
     }

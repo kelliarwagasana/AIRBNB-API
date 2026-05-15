@@ -1,13 +1,16 @@
 import { Router } from "express";
 import {
   getAllListings,
+  getMineListings,
+  getPendingListings,
   getListingById,
   createListing,
   updateListing,
+  updateListingStatus,
   deleteListing,
   searchListings,
 } from "../../controllers/listings.controller.js";
-import { authenticate, requireHost } from "../../middleware/auth.middleware.js";
+import { authenticate, requireAdmin, requireHost } from "../../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -57,6 +60,18 @@ const router = Router();
  *         schema:
  *           type: integer
  *         description: Filter by number of guests
+ *       - in: query
+ *         name: refresh
+ *         schema:
+ *           type: string
+ *           enum: ["1"]
+ *         description: Pass `1` to skip the short-lived list cache (use after adding photos so JSON is up to date).
+ *       - in: query
+ *         name: nocache
+ *         schema:
+ *           type: string
+ *           enum: ["1"]
+ *         description: Same behavior as `refresh=1`.
  *     responses:
  *       200:
  *         description: Paginated list of listings
@@ -69,7 +84,7 @@ const router = Router();
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Listing'
- *                 pagination:
+ *                 meta:
  *                   type: object
  *                   properties:
  *                     page:
@@ -82,6 +97,20 @@ const router = Router();
  *                       type: integer
  */
 router.get("/", getAllListings);
+
+/**
+ * @swagger
+ * /api/v1/listings/mine:
+ *   get:
+ *     summary: Listings owned by the authenticated host
+ *     tags: [Listings]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get("/mine", authenticate, requireHost, getMineListings);
+
+router.get("/pending", authenticate, requireAdmin, getPendingListings);
+
 /**
  * @swagger
  * /api/v1/listings/search:
@@ -237,6 +266,8 @@ router.post("/", authenticate, requireHost, createListing);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put("/:id", authenticate, updateListing);
+
+router.patch("/:id/status", authenticate, requireAdmin, updateListingStatus);
 
 /**
  * @swagger

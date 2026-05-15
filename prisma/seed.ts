@@ -1,19 +1,19 @@
 import "dotenv/config";
-import { prisma } from "./src/lib/prisma.js";
+import { prisma } from "../src/lib/prisma.js";
 import bcrypt from "bcrypt";
-import { title } from "node:process";
 
 async function main() {
   console.log("🌱 Seeding database...");
 
   await prisma.booking.deleteMany();
+  await prisma.listingPhoto.deleteMany();
   await prisma.listing.deleteMany();
   await prisma.user.deleteMany();
 
   // Create 3 users (at least 1 host, 1 guest)
   const user1 = await prisma.user.upsert({
     where: {
-      email: "john@example.com",
+      email: "johnmuka@gmail.com",
     },
     update: {
       name: "John Host",
@@ -21,7 +21,7 @@ async function main() {
     },
     create: {
       name: "John Host",
-      email: "john@example.com",
+      email: "johnmuka@gmail..com",
       username: "johnhost",
       phone: "555-1234",
       role: "HOST",
@@ -33,15 +33,15 @@ async function main() {
 
   const user2 = await prisma.user.upsert({
     where: {
-      email: "jane@example.com",
+      email: "janelia@gmail.com",
     },
     update: {
       name: "Jane Guest",
-      username: "janeguest",
+      username: "jane",
     },
     create: {
       name: "Jane Guest",
-      email: "jane@example.com",
+      email: "janelia@gmail.com.com",
       username: "janeguest",
       phone: "555-5678",
       role: "GUEST",
@@ -52,7 +52,7 @@ async function main() {
 
   const user3 = await prisma.user.upsert({
     where: {
-      email: "bob@example.com",
+      email: "bobsmith@gmail.com",
     },
     update: {
       name: "Bob Smith",
@@ -60,7 +60,7 @@ async function main() {
     },
     create: {
       name: "Bob Smith",
-      email: "bob@example.com",
+      email: "bobsmith@gmail.com",
       username: "bobsmith",
       phone: "555-9012",
       role: "GUEST",
@@ -71,50 +71,14 @@ async function main() {
 
   console.log("✅ Created 3 users");
 
-  // Create 3 listings
-  const listing = await prisma.listing.createMany({
-    data: [
-      {
-        title: "Cozy Downtown Apartment",
-        description: "Beautiful 2-bedroom apartment in the heart of the city. Walking distance to restaurants and attractions.",
-        location: "New York",
-        pricePerNight: 150.0,
-        guests: 4,
-        type: "APARTMENT",
-        amenities: ["WiFi", "Kitchen", "Air Conditioning", "TV"],
-        rating: 4.8,
-        hostId: user1.id,
-      },
-      {
-        title: "Beachfront Villa",
-        description: "Luxury villa with stunning ocean views. Private pool and direct beach access.",
-        location: "Miami",
-        pricePerNight: 350.0,
-        guests: 8,
-        type: "VILLA",
-        amenities: ["WiFi", "Pool", "Kitchen", "Parking", "Air Conditioning"],
-        rating: 4.9,
-        hostId: user1.id,
-      },
-      {
-        title: "Mountain Cabin Retreat",
-        description: "Peaceful cabin surrounded by nature. Perfect for a weekend getaway.",
-        location: "Denver",
-        pricePerNight: 95.0,
-        guests: 2,
-        type: "CABIN",
-        amenities: ["WiFi", "Fireplace", "Kitchen"],
-        rating: 4.7,
-        hostId: user1.id,
-      }
-    ],
-    skipDuplicates: true,
-  });
+  const cover1 = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80";
+  const cover3 = "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1400&q=80";
 
   const listing1 = await prisma.listing.create({
     data: {
-      title: "GREAT Downtown Apartment",
-      description: "Beautiful 3-bedroom apartment in the heart of the city. Walking distance to restaurants and attractions.",
+      title: "Cozy Downtown Apartment",
+      description:
+        "Beautiful 2-bedroom apartment in the heart of the city. Walking distance to restaurants and attractions.",
       location: "New York",
       pricePerNight: 150.0,
       guests: 4,
@@ -122,12 +86,46 @@ async function main() {
       amenities: ["WiFi", "Kitchen", "Air Conditioning", "TV"],
       rating: 4.8,
       hostId: user1.id,
+      url: cover1,
+
+      photos: {
+        create: [
+          { url: cover1 },
+          {
+            url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1400&q=80",
+          },
+        ],
+      },
     },
   });
 
-  console.log("✅ Created 3 listings");
+  const listing3 = await prisma.listing.create({
+    data: {
+      title: "Mountain Cabin Retreat",
+      description: "Peaceful cabin surrounded by nature. Perfect for a weekend getaway.",
+      location: "Denver",
+      pricePerNight: 95.0,
+      guests: 2,
+      type: "CABIN",
+      amenities: ["WiFi", "Fireplace", "Kitchen"],
+      rating: 4.7,
+      hostId: user1.id,
+      url: cover3,
 
-  // Create 2 bookings
+      photos: {
+        create: [
+          { url: cover3 },
+          {
+            url: "https://images.unsplash.com/photo-1472224371017-08207f84aaae?auto=format&fit=crop&w=1400&q=80",
+          },
+        ],
+      },
+    },
+  });
+
+  console.log("✅ Created 2 listings (photos in ListingPhoto; cover also on Listing.url for Prisma Studio)");
+
+  // Create 1 booking
    await prisma.booking.create({
     data: {
       guestId: user2.id,
@@ -139,23 +137,13 @@ async function main() {
     },
   });
 
-  const booking2 = await prisma.booking.create({
-    data: {
-      guestId: user3.id,
-      listingId: listing1.id,
-      checkIn: new Date("2026-06-15"),
-      checkOut: new Date("2026-06-20"),
-      totalPrice: 1750.0, // 5 nights x $350
-      status: "PENDING",
-    },
-  });
 
-  console.log("✅ Created 2 bookings");
+  console.log("✅ Created 1 booking");
 
   console.log("\n🎉 Database seeded successfully!");
   console.log(`   - 3 users (1 host, 2 guests)`);
-  console.log(`   - 3 listings`);
-  console.log(`   - 2 bookings`);
+  console.log(`   - 2 listings`);
+  console.log(`   - 1 booking`);
 }
 
 main()

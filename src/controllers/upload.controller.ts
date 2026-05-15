@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary.js";
+import { clearCacheByPrefix } from "../config/cache.js";
 import type { AuthRequest } from "../middleware/auth.middleware.js";
 
 // POST /users/:id/avatar
@@ -181,7 +182,20 @@ export async function uploadListingPhotos(req: AuthRequest, res: Response) {
 
     await Promise.all(photoPromises);
 
-    // 9. Return updated listing with all photos
+    const orderedPhotos = await prisma.listingPhoto.findMany({
+      where: { listingId },
+      orderBy: { id: "asc" },
+    });
+    const coverUrl = orderedPhotos[0]?.url;
+    if (coverUrl) {
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { url: coverUrl },
+      });
+    }
+
+    clearCacheByPrefix("listings:list:");
+
     const updatedListing = await prisma.listing.findUnique({
       where: { id: listingId },
       include: {
@@ -244,6 +258,17 @@ export async function deleteListingPhoto(req: AuthRequest, res: Response) {
     await prisma.listingPhoto.delete({
       where: { id: photoId },
     });
+
+    const nextCover = await prisma.listingPhoto.findFirst({
+      where: { listingId },
+      orderBy: { id: "asc" },
+    });
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { url: nextCover?.url ?? null },
+    });
+
+    clearCacheByPrefix("listings:list:");
 
     return res.json({ message: "Photo deleted successfully" });
   } catch (error) {

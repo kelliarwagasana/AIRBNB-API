@@ -4,9 +4,11 @@ import {
   deleteBooking,
   getAllBookings,
   getBookingById,
+  getMyBookings,
+  getHostBookings,
   updateBookingStatus,
 } from "../../controllers/bookings.controller.js";
-import { authenticate, requireGuest } from "../../middleware/auth.middleware.js";
+import { authenticate, requireAdmin, requireGuest, requireHost } from "../../middleware/auth.middleware.js";
 
 /**
  * @swagger
@@ -146,7 +148,11 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/", authenticate, getAllBookings);
+router.get("/me", authenticate, requireGuest, getMyBookings);
+
+router.get("/host", authenticate, requireHost, getHostBookings);
+
+router.get("/", authenticate, requireAdmin, getAllBookings);
 
 /**
  * @swagger
@@ -266,7 +272,7 @@ router.post("/", authenticate, requireGuest, createBooking);
  *       404:
  *         description: Booking not found
  */
-router.patch("/:id/status", updateBookingStatus);
+router.patch("/:id/status", authenticate, updateBookingStatus);
 
 /**
  * @swagger

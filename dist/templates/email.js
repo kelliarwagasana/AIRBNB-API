@@ -55,7 +55,7 @@ export function bookingCancellationEmail(guestName, listingTitle, checkIn, check
 
       <p>We encourage you to explore other listings and find a new place to stay.</p>
 
-      <a href="http://localhost:3000/listings"
+      <a href="http://localhost:4000/listings"
         display: inline-block;
         margin-top: 20px;
         padding: 10px 20px;

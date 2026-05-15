@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   changePassword,
   forgotPassword,
+  googleLogin,
   login,
   register,
   resetPassword,
@@ -87,6 +88,7 @@ router.post("/register", register);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/login", login);
+router.post("/google", googleLogin);
 
 /**
  * @swagger
