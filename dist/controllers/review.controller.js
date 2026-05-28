@@ -1,5 +1,6 @@
 import { clearCacheByPrefix, getCache, setCache } from "../config/cache.js";
 import { prisma } from "../lib/prisma.js";
+import { notifyUserUnlessSelf } from "../services/notification.service.js";
 async function refreshListingRating(listingId) {
     const aggregate = await prisma.review.aggregate({
         where: { listingId },
@@ -127,6 +128,22 @@ export async function createReview(req, res) {
         });
         await refreshListingRating(listingId);
         invalidateReviewCaches(listingId);
+        try {
+            await notifyUserUnlessSelf(listing.hostId, reviewerId, {
+                type: "REVIEW_RECEIVED",
+                title: "New review received",
+                body: `${reviewer.name} left a ${numericRating}-star review on "${listing.title}".`,
+                metadata: {
+                    listingId,
+                    reviewId: review.id,
+                    rating: numericRating,
+                    reviewerName: reviewer.name,
+                },
+            });
+        }
+        catch (error) {
+            console.error("Failed to create review notification:", error);
+        }
         return res.status(201).json(review);
     }
     catch {

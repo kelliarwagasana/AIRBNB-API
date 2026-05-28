@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { clearCacheByPrefix, getCache, setCache } from "../config/cache.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
+import { notifyAdmins, notifyUserUnlessSelf } from "../services/notification.service.js";
 function parsePagination(req) {
     const page = parseInt(req.query["page"] ?? "1", 10);
     const limit = parseInt(req.query["limit"] ?? "10", 10);
@@ -320,7 +321,9 @@ export async function createListing(req, res) {
                 type: String(type ?? "APARTMENT").toUpperCase(),
                 amenities: Array.isArray(amenities) ? amenities.map(String) : [],
                 hostId: req.userId,
-                status: "PENDING_APPROVAL",
+                // Published immediately so new stays appear on /listings and home.
+                // Admin moderation can still reject via PATCH /listings/:id/status.
+                status: "PUBLISHED",
                 url: photoUrls[0] ?? undefined,
                 photos: photoUrls.length
                     ? {
@@ -333,6 +336,20 @@ export async function createListing(req, res) {
             },
         });
         invalidateListingCaches();
+        try {
+            await notifyAdmins({
+                type: "LISTING_CREATED",
+                title: "New listing published",
+                body: `A new listing "${listing.title}" was published on the platform.`,
+                metadata: {
+                    listingId: listing.id,
+                    hostId: req.userId,
+                },
+            });
+        }
+        catch (error) {
+            logger.error("Failed to create listing notification", { error });
+        }
         return res.status(201).json(attachListingCover(listing));
     }
     catch (error) {
@@ -373,6 +390,27 @@ export async function updateListingStatus(req, res) {
             },
         });
         invalidateListingCaches();
+        try {
+            if (status === "PUBLISHED") {
+                await notifyUserUnlessSelf(listing.hostId, req.userId, {
+                    type: "LISTING_APPROVED",
+                    title: "Listing approved",
+                    body: `Your listing "${listing.title}" has been approved and is now live.`,
+                    metadata: { listingId: listing.id },
+                });
+            }
+            else if (status === "REJECTED") {
+                await notifyUserUnlessSelf(listing.hostId, req.userId, {
+                    type: "LISTING_REJECTED",
+                    title: "Listing rejected",
+                    body: `Your listing "${listing.title}" was rejected by moderation.`,
+                    metadata: { listingId: listing.id },
+                });
+            }
+        }
+        catch (error) {
+            logger.error("Failed to create listing status notification", { error });
+        }
         return res.json(attachListingCover(listing));
     }
     catch (error) {

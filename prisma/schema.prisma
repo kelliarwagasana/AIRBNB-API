@@ -37,6 +37,17 @@ enum ListingStatus {
   REJECTED
 }
 
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_CONFIRMED
+  BOOKING_DECLINED
+  BOOKING_CANCELLED
+  REVIEW_RECEIVED
+  LISTING_APPROVED
+  LISTING_REJECTED
+  LISTING_CREATED
+}
+
 model User {
   id             String      @id @default(uuid())
   name           String
@@ -60,6 +71,7 @@ model User {
   bookings       Booking[]
   reviews        Review[]
   savedListings  SavedListing[]
+  notifications  Notification[]
 }
 
 model Listing {
@@ -148,5 +160,20 @@ model Review {
 
   listingId  String
   listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
 

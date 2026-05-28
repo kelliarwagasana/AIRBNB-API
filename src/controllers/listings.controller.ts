@@ -5,6 +5,7 @@ import { clearCacheByPrefix, getCache, setCache } from "../config/cache.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
 import type { AuthRequest } from "../middleware/auth.middleware.js";
+import { notifyAdmins, notifyUserUnlessSelf } from "../services/notification.service.js";
 
 type ListingWithBooked = Prisma.ListingGetPayload<{ include: { photos: true; host: { select: { id: true; name: true; avatar: true; email: true } } } }> & {
   isBookedByMe?: boolean
@@ -341,9 +342,46 @@ export async function getListingById(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Listing not found" });
     }
 
+    if (listing.status !== "PUBLISHED") {
+      const isHost = req.userId === listing.hostId;
+      const isAdmin = req.role === "ADMIN";
+      if (!isHost && !isAdmin) {
+        return res.status(404).json({ error: "Listing not found" });
+      }
+    }
+
     return res.json(attachListingCover(listing));
   } catch (error) {
     logger.error("Error in getListingById", { error, path: req.path });
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function getAdminAllListings(_req: AuthRequest, res: Response) {
+  try {
+    const listings = await prisma.listing.findMany({
+      include: {
+        host: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            username: true,
+            phone: true,
+            role: true,
+            avatar: true,
+            createdAt: true,
+          },
+        },
+        photos: true,
+        reviews: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json(attachListingCovers(listings));
+  } catch (error) {
+    logger.error("Error in getAdminAllListings", { error, path: _req.path });
     return res.status(500).json({ error: "Something went wrong" });
   }
 }
@@ -380,9 +418,7 @@ export async function createListing(req: AuthRequest, res: Response) {
         type: (String(type ?? "APARTMENT").toUpperCase() as ListingType),
         amenities: Array.isArray(amenities) ? amenities.map(String) : [],
         hostId: req.userId,
-        // Published immediately so new stays appear on /listings and home.
-        // Admin moderation can still reject via PATCH /listings/:id/status.
-        status: "PUBLISHED",
+        status: "PENDING_APPROVAL",
         url: photoUrls[0] ?? undefined,
         photos: photoUrls.length
           ? {
@@ -396,6 +432,20 @@ export async function createListing(req: AuthRequest, res: Response) {
     });
 
     invalidateListingCaches();
+
+    try {
+      await notifyAdmins({
+        type: "LISTING_CREATED",
+        title: "Listing awaiting review",
+        body: `"${listing.title}" was submitted and needs moderation before going live.`,
+        metadata: {
+          listingId: listing.id,
+          hostId: req.userId,
+        },
+      });
+    } catch (error) {
+      logger.error("Failed to create listing notification", { error });
+    }
 
     return res.status(201).json(attachListingCover(listing));
   } catch (error) {
@@ -443,6 +493,26 @@ export async function updateListingStatus(req: AuthRequest, res: Response) {
     });
 
     invalidateListingCaches();
+
+    try {
+      if (status === "PUBLISHED") {
+        await notifyUserUnlessSelf(listing.hostId, req.userId, {
+          type: "LISTING_APPROVED",
+          title: "Listing approved",
+          body: `Your listing "${listing.title}" has been approved and is now live.`,
+          metadata: { listingId: listing.id },
+        });
+      } else if (status === "REJECTED") {
+        await notifyUserUnlessSelf(listing.hostId, req.userId, {
+          type: "LISTING_REJECTED",
+          title: "Listing rejected",
+          body: `Your listing "${listing.title}" was rejected by moderation.`,
+          metadata: { listingId: listing.id },
+        });
+      }
+    } catch (error) {
+      logger.error("Failed to create listing status notification", { error });
+    }
 
     return res.json(attachListingCover(listing));
   } catch (error) {

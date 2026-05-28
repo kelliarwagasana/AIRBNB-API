@@ -55,6 +55,26 @@ export function requireGuest(req: AuthRequest, res: Response, next: NextFunction
   next();
 }
 
+export function optionalAuthenticate(req: AuthRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers["authorization"];
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+    req.userId = decoded.userId;
+    req.role = decoded.role;
+  } catch {
+    // Ignore invalid tokens for optional auth.
+  }
+
+  next();
+}
+
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   if (req.role !== "ADMIN") {
     return res.status(403).json({ error: "Only admins can perform this action" });

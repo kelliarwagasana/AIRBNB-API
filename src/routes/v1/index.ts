@@ -8,6 +8,8 @@ import aiRouter from "./ai.routes.js";
 import uploadRouter from "./upload.routes.js";
 import adminRouter from "./admin.routes.js";
 import savedRouter from "./saved.routes.js";
+import notificationsRouter from "./notifications.route.js";
+import analyticsRouter from "./analytics.routes.js";
 
 const v1Router = Router();
 
@@ -20,5 +22,7 @@ v1Router.use("/ai", aiRouter);
 v1Router.use("/upload", uploadRouter);
 v1Router.use("/admin", adminRouter);
 v1Router.use("/saved", savedRouter);
+v1Router.use("/notifications", notificationsRouter);
+v1Router.use("/analytics", analyticsRouter);
 
 export default v1Router;

@@ -3,6 +3,7 @@ import {
   getAllListings,
   getMineListings,
   getPendingListings,
+  getAdminAllListings,
   getListingById,
   createListing,
   updateListing,
@@ -10,7 +11,7 @@ import {
   deleteListing,
   searchListings,
 } from "../../controllers/listings.controller.js";
-import { authenticate, requireAdmin, requireHost } from "../../middleware/auth.middleware.js";
+import { authenticate, optionalAuthenticate, requireAdmin, requireHost } from "../../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -111,6 +112,8 @@ router.get("/mine", authenticate, requireHost, getMineListings);
 
 router.get("/pending", authenticate, requireAdmin, getPendingListings);
 
+router.get("/admin/all", authenticate, requireAdmin, getAdminAllListings);
+
 /**
  * @swagger
  * /api/v1/listings/search:
@@ -174,7 +177,7 @@ router.get("/search", searchListings);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/:id", getListingById);
+router.get("/:id", optionalAuthenticate, getListingById);
 
 /**
  * @swagger

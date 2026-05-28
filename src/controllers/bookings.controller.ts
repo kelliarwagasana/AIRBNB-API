@@ -4,6 +4,10 @@ import { prisma } from "../lib/prisma.js";
 import type { AuthRequest } from "../middleware/auth.middleware.js";
 import { sendEmail } from "../config/email.js";
 import { bookingCancellationEmail, bookingConfirmationEmail } from "../templates/email.js";
+import {
+  notifyAdmins,
+  notifyUserUnlessSelf,
+} from "../services/notification.service.js";
 
 function parsePagination(req: AuthRequest) {
   const page = parseInt((req.query["page"] as string) ?? "1", 10);
@@ -281,6 +285,30 @@ export async function createBooking(req: AuthRequest, res: Response) {
         console.error("Failed to send booking email:", error);
       }
 
+      try {
+        const bookingMeta = {
+          bookingId: booking.id,
+          listingId: booking.listingId,
+          guestName: booking.guest.name,
+        };
+
+        await notifyUserUnlessSelf(booking.listing.hostId, effectiveUserId, {
+          type: "BOOKING_CREATED",
+          title: "New booking request",
+          body: `${booking.guest.name} requested to book "${booking.listing.title}".`,
+          metadata: bookingMeta,
+        });
+
+        await notifyAdmins({
+          type: "BOOKING_CREATED",
+          title: "New platform booking",
+          body: `${booking.guest.name} booked "${booking.listing.title}".`,
+          metadata: bookingMeta,
+        });
+      } catch (error) {
+        console.error("Failed to create booking notifications:", error);
+      }
+
       return res.status(201).json(booking);
     } catch (error) {
       if (error instanceof Error && error.message === "BOOKING_CONFLICT") {
@@ -342,6 +370,32 @@ export async function updateBookingStatus(req: AuthRequest, res: Response) {
       },
     });
 
+    try {
+      const bookingMeta = {
+        bookingId: updatedBooking.id,
+        listingId: updatedBooking.listingId,
+        listingTitle: updatedBooking.listing.title,
+      };
+
+      if (status === "CONFIRMED") {
+        await notifyUserUnlessSelf(updatedBooking.guestId, req.userId, {
+          type: "BOOKING_CONFIRMED",
+          title: "Booking confirmed",
+          body: `Your booking for "${updatedBooking.listing.title}" has been confirmed.`,
+          metadata: bookingMeta,
+        });
+      } else if (status === "CANCELLED") {
+        await notifyUserUnlessSelf(updatedBooking.guestId, req.userId, {
+          type: "BOOKING_DECLINED",
+          title: "Booking declined",
+          body: `Your booking request for "${updatedBooking.listing.title}" was declined.`,
+          metadata: bookingMeta,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create booking status notifications:", error);
+    }
+
     return res.json(updatedBooking);
   } catch {
     return res.status(500).json({ error: "Something went wrong" });
@@ -396,6 +450,23 @@ export async function deleteBooking(req: AuthRequest, res: Response) {
       );
     } catch (error) {
       console.error("Failed to send cancellation email:", error);
+    }
+
+    try {
+      if (cancelledBooking.guestId === req.userId) {
+        await notifyUserUnlessSelf(cancelledBooking.listing.hostId, req.userId, {
+          type: "BOOKING_CANCELLED",
+          title: "Booking cancelled",
+          body: `${cancelledBooking.guest.name} cancelled their booking for "${cancelledBooking.listing.title}".`,
+          metadata: {
+            bookingId: cancelledBooking.id,
+            listingId: cancelledBooking.listingId,
+            guestName: cancelledBooking.guest.name,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create cancellation notifications:", error);
     }
 
     return res.json({ message: "Booking cancelled successfully" });

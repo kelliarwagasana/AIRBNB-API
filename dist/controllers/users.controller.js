@@ -191,7 +191,7 @@ export async function createUser(req, res) {
                 username: String(username),
                 phone: String(phone),
                 password: hashedPassword,
-                role: role === "HOST" || role === "GUEST" ? role : "GUEST",
+                role: role === "HOST" || role === "GUEST" || role === "ADMIN" ? role : "GUEST",
                 avatar: avatar ?? null,
                 bio: bio ?? null,
             },
